@@ -1,0 +1,26 @@
+# .NET
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+*.user
+*.suo
+.vs/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Env
+.env.local
+.env.*.local
+
+# Prototypes and Ephemeral Assets
+prototypes/
