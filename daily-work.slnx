@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/api/">
     <Project Path="api/DailyWork.Api.csproj" />
+    <Project Path="tests/DailyWork.Api.Tests.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
