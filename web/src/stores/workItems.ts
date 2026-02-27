@@ -16,7 +16,10 @@ export const useWorkItemsStore = defineStore('workItems', () => {
   }
 
   async function create(title: string) {
-    const item: WorkItem = await client.post('/api/work-items', { title }) as any
+    const item: WorkItem = await client.post('/api/work-items', {
+      title,
+      category: 'BigThing'
+    }) as any
     items.value.push(item)
   }
 
