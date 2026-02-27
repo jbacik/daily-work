@@ -16,6 +16,7 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
   async function fetch(week?: string) {
     const targetWeek = week ?? getWeekStart()
     weekOf.value = targetWeek
+    console.log('🪃 Fetching tasks for week of', targetWeek);
     items.value = await client.get('/api/daily-tasks', {
       params: { weekOf: targetWeek }
     }) as any
