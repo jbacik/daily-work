@@ -2,4 +2,7 @@
   <Folder Name="/api/">
     <Project Path="api/DailyWork.Api.csproj" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+  </Folder>
 </Solution>

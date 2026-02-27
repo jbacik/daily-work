@@ -11,12 +11,12 @@ export const useReadWatchStore = defineStore('readWatch', () => {
     items.value = await client.get('/api/read-watch', { params }) as any
   }
 
-  async function create(title: string, url: string) {
-    const item: ReadWatchItem = await client.post('/api/read-watch', { title, url }) as any
+  async function create(title: string, url: string, type: 'read' | 'watch' | 'learn' = 'read') {
+    const item: ReadWatchItem = await client.post('/api/read-watch', { title, url, type }) as any
     items.value.push(item)
   }
 
-  async function update(id: number, data: { title?: string; url?: string; isDone?: boolean }) {
+  async function update(id: number, data: { title?: string; url?: string; type?: 'read' | 'watch' | 'learn'; isDone?: boolean }) {
     const updated: ReadWatchItem = await client.put(`/api/read-watch/${id}`, data) as any
     const idx = items.value.findIndex((i) => i.id === id)
     if (idx !== -1) items.value[idx] = updated

@@ -4,6 +4,18 @@ import { useReadWatchStore } from '@/stores/readWatch'
 
 defineProps<{ item: ReadWatchItem }>()
 const store = useReadWatchStore()
+
+const TYPE_STYLES = {
+  read: 'bg-red-100 text-red-700',
+  watch: 'bg-blue-100 text-blue-700',
+  learn: 'bg-green-100 text-green-700',
+} as const
+
+const TYPE_LABELS = {
+  read: 'READ',
+  watch: 'WATCH',
+  learn: 'LEARN',
+} as const
 </script>
 
 <template>
@@ -11,20 +23,28 @@ const store = useReadWatchStore()
     <input
       type="checkbox"
       :checked="item.isDone"
-      class="w-4 h-4 accent-indigo-500 shrink-0"
+      class="w-4 h-4 accent-primary shrink-0"
       @change="store.update(item.id, { isDone: !item.isDone })"
     />
+    <span
+      :class="[
+        'text-xs font-medium px-1.5 py-0.5 shrink-0',
+        TYPE_STYLES[item.type || 'read']
+      ]"
+    >
+      {{ TYPE_LABELS[item.type || 'read'] }}
+    </span>
     <a
       :href="item.url"
       target="_blank"
       rel="noopener"
-      class="flex-1 text-indigo-600 hover:underline truncate"
+      class="flex-1 text-primary hover:underline truncate"
       :class="{ 'line-through opacity-50': item.isDone }"
     >
       {{ item.title }}
     </a>
     <button
-      class="text-red-300 hover:text-red-500"
+      class="text-destructive/50 hover:text-destructive"
       title="Delete"
       @click="store.remove(item.id)"
     >
