@@ -20,5 +20,6 @@ export interface ReadWatchItem {
   url: string
   type: 'read' | 'watch' | 'learn'
   isDone: boolean
+  isActive?: boolean
   date: string
 }

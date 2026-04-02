@@ -7,20 +7,25 @@ import { useScratchPadStore } from '@/stores/scratchPad'
 import { DAYS } from '@/utils/week'
 import BigThing from '@/components/BigThing.vue'
 import DailyTasks from '@/components/DailyTasks.vue'
+import DailyTasksCompact from '@/components/DailyTasksCompact.vue'
 import WeekOverview from '@/components/WeekOverview.vue'
 import ReadWatchList from '@/components/ReadWatchList.vue'
 import ScratchPad from '@/components/ScratchPad.vue'
+import StatsPanel from '@/components/StatsPanel.vue'
+
+type ViewMode = 'daily' | 'weekly'
 
 const workItems = useWorkItemsStore()
 const readWatch = useReadWatchStore()
 const dailyTasks = useDailyTasksStore()
 const scratchPad = useScratchPadStore()
 
-const launchTime = new Date() // TODO: live clock planned for later
+const launchTime = new Date()
+const view = ref<ViewMode>('daily')
 
-const currentDayLabel = computed(() => {
+const currentDayLabel = computed((): string => {
   const day = dailyTasks.currentDay
-  return day >= 0 && day < 5 ? DAYS[day] : 'N/A'
+  return day >= 0 && day < 5 ? DAYS[day]! : 'N/A'
 })
 
 function formatDate(date: Date): string {
@@ -50,7 +55,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
@@ -63,27 +68,69 @@ onMounted(() => {
               Weekly task tracker // {{ formatDate(launchTime) }} {{ formatTime(launchTime) }}
             </p>
           </div>
+
+          <!-- Navigation Box -->
           <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono">
-            <div>┌────────────────────────┐</div>
-            <div>│ Week of: {{ dailyTasks.weekOf.padEnd(13) }}│</div>
-            <div>│ Day: {{ currentDayLabel.padEnd(18) }}│</div>
-            <div>└────────────────────────┘</div>
+            <div>┌────────────────────────────┐</div>
+            <button
+              class="flex w-full hover:bg-secondary/50 transition-colors"
+              @click="view = 'weekly'"
+            >
+              <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
+              <span> Week of: {{ dailyTasks.weekOf.padEnd(14) }}</span>
+              <span>│</span>
+            </button>
+            <button
+              class="flex w-full hover:bg-secondary/50 transition-colors"
+              @click="view = 'daily'"
+            >
+              <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
+              <span> Day: {{ currentDayLabel.padEnd(19) }}</span>
+              <span>│</span>
+            </button>
+            <div>└────────────────────────────┘</div>
           </div>
         </div>
 
         <div class="text-xs text-muted-foreground border-t border-b border-border py-2">
-          <span class="text-primary">tip:</span> Click any field to edit • Tasks auto-save • Week resets on Monday
+          <span class="text-primary">tip:</span> Click Week/Day above to switch views • Tasks auto-save
         </div>
       </header>
 
       <BigThing />
-      <WeekOverview />
-      <DailyTasks />
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ReadWatchList />
-        <ScratchPad />
-      </div>
+      <!-- Daily View -->
+      <main v-if="view === 'daily'" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div class="lg:col-span-2 space-y-6">
+          <DailyTasksCompact />
+          <ReadWatchList />
+        </div>
+        <div class="space-y-6">
+          <ScratchPad />
+        </div>
+      </main>
+
+      <!-- Weekly View -->
+      <main v-if="view === 'weekly'" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div class="lg:col-span-2 space-y-6">
+          <WeekOverview />
+          <DailyTasks />
+          <ReadWatchList :default-show-all="true" />
+        </div>
+        <div class="space-y-6">
+          <StatsPanel />
+          <ScratchPad />
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground">
+        <div class="flex items-center justify-center gap-2">
+          <span>───</span>
+          <span>EOF</span>
+          <span>───</span>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
