@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DailyWork.Api.Endpoints;
 
-public static class ReadWatchEndpoints
+internal static class ReadWatchEndpoints
 {
     public static RouteGroupBuilder MapReadWatchEndpoints(this WebApplication app)
     {

@@ -1,4 +1,10 @@
 namespace DailyWork.Api.Dtos;
 
-public record CreateReadWatchItemDto(string Title, string Url, DateTime? Date);
-public record UpdateReadWatchItemDto(string? Title, string? Url, bool? IsDone);
+internal record CreateReadWatchItemDto(string Title, string Url, DateTime? Date);
+
+internal record UpdateReadWatchItemDto
+{
+    public string? Title { get; init; }
+    public string? Url { get; init; }
+    public bool? IsDone { get; init; }
+}

@@ -1,7 +1,7 @@
 namespace DailyWork.Api.Enums;
 
-public enum WorkItemCategory
+internal enum WorkItemCategory
 {
-    BigThing,
-    SmallThing
+    BigThing = 1,
+    SmallThing = 2,
 }

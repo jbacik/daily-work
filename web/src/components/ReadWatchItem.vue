@@ -2,7 +2,7 @@
 import type { ReadWatchItem } from '@/types'
 import { useReadWatchStore } from '@/stores/readWatch'
 
-defineProps<{ item: ReadWatchItem }>()
+const { item } = defineProps<{ item: ReadWatchItem }>()
 const store = useReadWatchStore()
 
 const TYPE_STYLES = {

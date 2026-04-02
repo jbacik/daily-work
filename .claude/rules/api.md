@@ -100,7 +100,7 @@ Prefer `internal` over `public` for all types (entities, DTOs, endpoint classes,
 [assembly: InternalsVisibleTo("DailyWork.Api.Tests")]
 ```
 
-Only mark types `public` when they need to cross assembly boundaries.
+Only mark types `public` when they need to cross assembly boundaries. `IApiMarker` is one such exception — it is used as a generic type parameter in `WebApplicationFactory<IApiMarker>` from the test project and must remain `public`.
 
 ## Logging
 

@@ -2,7 +2,7 @@ using DailyWork.Api.Enums;
 
 namespace DailyWork.Api.Entities;
 
-public class WorkItem
+internal class WorkItem
 {
     public int Id { get; set; }
     public required string Title { get; set; }

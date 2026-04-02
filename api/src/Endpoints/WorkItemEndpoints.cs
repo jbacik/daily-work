@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DailyWork.Api.Endpoints;
 
-public static class WorkItemEndpoints
+internal static class WorkItemEndpoints
 {
     public static RouteGroupBuilder MapWorkItemEndpoints(this WebApplication app)
     {

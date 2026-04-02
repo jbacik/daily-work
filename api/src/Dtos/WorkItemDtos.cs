@@ -1,4 +1,9 @@
 namespace DailyWork.Api.Dtos;
 
-public record CreateWorkItemDto(string Title, string? Category, DateTime? Date);
-public record UpdateWorkItemDto(string? Title, bool? IsDone);
+internal record CreateWorkItemDto(string Title, string? Category, DateTime? Date);
+
+internal record UpdateWorkItemDto
+{
+    public string? Title { get; init; }
+    public bool? IsDone { get; init; }
+}

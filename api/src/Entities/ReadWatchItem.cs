@@ -1,6 +1,6 @@
 namespace DailyWork.Api.Entities;
 
-public class ReadWatchItem
+internal class ReadWatchItem
 {
     public int Id { get; set; }
     public required string Title { get; set; }
