@@ -1,9 +1,24 @@
 <Solution>
+  <Folder Name="/.claude/rules/">
+    <File Path=".claude/rules/api.md" />
+    <File Path=".claude/rules/migrations.md" />
+    <File Path=".claude/rules/testing.md" />
+    <File Path=".claude/rules/vue.md" />
+  </Folder>
   <Folder Name="/api/">
     <Project Path="api/src/DailyWork.Api.csproj" />
     <Project Path="api/tests/DailyWork.Api.Tests.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
+  </Folder>
+  <Folder Name="/.claude/">
+    <File Path=".claude/settings.local.json" />
+    <Folder Name="/.claude/rules/">
+      <File Path=".claude/rules/api.md" />
+      <File Path=".claude/rules/migrations.md" />
+      <File Path=".claude/rules/testing.md" />
+      <File Path=".claude/rules/vue.md" />
+    </Folder>
   </Folder>
 </Solution>
