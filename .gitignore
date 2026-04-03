@@ -24,3 +24,4 @@ dist/
 
 # Prototypes and Ephemeral Assets
 prototypes/
+/.claude/settings.local.json
