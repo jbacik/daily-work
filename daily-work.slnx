@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/.claude/rules/">
     <File Path=".claude/rules/api.md" />
+    <File Path=".claude/rules/commits.md" />
     <File Path=".claude/rules/migrations.md" />
     <File Path=".claude/rules/testing.md" />
+    <File Path=".claude/rules/vue-testing.md" />
     <File Path=".claude/rules/vue.md" />
   </Folder>
   <Folder Name="/api/">
