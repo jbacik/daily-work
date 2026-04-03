@@ -66,6 +66,12 @@ fix(web): correct date offset in work item form
 chore: pin axios to 1.14.0
 ```
 
+## Merging Rules
+
+- **Never merge a branch autonomously.** Do not run `git merge`, `git rebase` onto another branch, or merge a PR without being explicitly asked.
+- The only merge operation to perform without extra prompting is pulling `main` into a feature branch — and only when the user explicitly asks for it (`git merge main` or `git rebase main` from the feature branch).
+- Never merge a feature branch into `main`, squash-merge, or close a PR via CLI unless directly instructed.
+
 ## Consistency Rule
 
 Branch name, commit message, and PR title should all reflect the same type and scope:
