@@ -19,7 +19,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
             if (descriptor != null)
+            {
                 services.Remove(descriptor);
+            }
 
             // Create and open a shared in-memory SQLite connection
             _connection = new SqliteConnection("DataSource=:memory:;Mode=Memory;Cache=Shared");
