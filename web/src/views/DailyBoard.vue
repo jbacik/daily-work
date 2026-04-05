@@ -70,23 +70,27 @@ onMounted(() => {
           </div>
 
           <!-- Navigation Box -->
-          <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono">
+          <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono w-fit">
             <div>┌────────────────────────────┐</div>
             <button
+              type="button"
               class="flex w-full hover:bg-secondary/50 transition-colors"
+              :aria-pressed="view === 'weekly'"
               @click="view = 'weekly'"
             >
               <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
-              <span> Week of: {{ dailyTasks.weekOf.padEnd(14) }}</span>
-              <span>│</span>
+              <span> Week of: {{ dailyTasks.weekOf }}</span>
+              <span class="ml-auto">│</span>
             </button>
             <button
+              type="button"
               class="flex w-full hover:bg-secondary/50 transition-colors"
+              :aria-pressed="view === 'daily'"
               @click="view = 'daily'"
             >
               <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
-              <span> Day: {{ currentDayLabel.padEnd(19) }}</span>
-              <span>│</span>
+              <span> Day: {{ currentDayLabel }}</span>
+              <span class="ml-auto">│</span>
             </button>
             <div>└────────────────────────────┘</div>
           </div>
