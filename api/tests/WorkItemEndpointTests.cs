@@ -17,8 +17,11 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly CustomWebApplicationFactory _factory;
+
     public WorkItemEndpointTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -48,10 +51,11 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetWorkItems_ReturnsCreatedItem()
     {
-        var payload = new { Title = "Integration test item", Category = "BigThing" };
+        var date = _factory.DateTimeProvider.UtcToday.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        var payload = new { Title = "Integration test item", Category = "BigThing", Date = date };
         await _client.PostAsJsonAsync("/api/work-items", payload);
 
-        var response = await _client.GetAsync($"/api/work-items?date={DateTime.Today:yyyy-MM-dd}");
+        var response = await _client.GetAsync($"/api/work-items?date={date}");
 
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);

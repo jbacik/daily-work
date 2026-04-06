@@ -1,11 +1,14 @@
+using DailyWork.Api;
 using DailyWork.Api.Data;
 using DailyWork.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+builder.AddServiceDefaults();
+
+builder.AddNpgsqlDbContext<AppDbContext>("dailywork");
+builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
@@ -25,6 +28,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors();
 
+app.MapDefaultEndpoints();
 app.MapWorkItemEndpoints();
 app.MapReadWatchEndpoints();
 
