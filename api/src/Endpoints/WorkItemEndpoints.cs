@@ -12,24 +12,42 @@ internal static class WorkItemEndpoints
 	{
 		var group = app.MapGroup("/api/work-items");
 
-		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly? date) =>
+		group.MapGet("/", async (AppDbContext db, string? weekOf) =>
 		{
-			var d = date ?? dateTime.UtcToday;
-			return await db.WorkItems
-				.Where(w => w.Date == d)
+			if (weekOf is null)
+				return Results.BadRequest("weekOf query parameter is required.");
+
+			var items = await db.WorkItems
+				.AsNoTracking()
+				.Where(w => w.WeekOf == weekOf)
 				.OrderBy(w => w.CreatedAt)
 				.ToListAsync();
+
+			return Results.Ok(items);
 		});
 
 		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateWorkItemDto dto) =>
 		{
+			var category = Enum.TryParse<WorkItemCategory>(dto.Category, out var parsedCat)
+				? parsedCat
+				: WorkItemCategory.SmallThing;
+
+			var date = dto.Date ?? dateTime.UtcToday;
+			var weekOf = ComputeWeekOf(date);
+
+			if (category == WorkItemCategory.SmallThing)
+			{
+				var count = await db.WorkItems.CountAsync(w => w.Date == date && w.Category == WorkItemCategory.SmallThing);
+				if (count >= 5)
+					return Results.Problem("Maximum 5 tasks per day.", statusCode: 422);
+			}
+
 			var item = new WorkItem
 			{
 				Title = dto.Title,
-				Category = Enum.TryParse<WorkItemCategory>(dto.Category, out var cat)
-					? cat
-					: WorkItemCategory.SmallThing,
-				Date = dto.Date ?? dateTime.UtcToday
+				Category = category,
+				Date = date,
+				WeekOf = weekOf,
 			};
 			db.WorkItems.Add(item);
 			await db.SaveChangesAsync();
@@ -65,9 +83,9 @@ internal static class WorkItemEndpoints
 				return Results.NotFound();
 			}
 
-			// Demote any existing BigThing for the same date
+			// Demote any existing BigThing for the same week
 			var existing = await db.WorkItems
-				.Where(w => w.Date == item.Date && w.Category == WorkItemCategory.BigThing && w.Id != id)
+				.Where(w => w.WeekOf == item.WeekOf && w.Category == WorkItemCategory.BigThing && w.Id != id)
 				.ToListAsync();
 
 			foreach (var e in existing)
@@ -107,5 +125,11 @@ internal static class WorkItemEndpoints
 		});
 
 		return group;
+	}
+
+	private static string ComputeWeekOf(DateOnly date)
+	{
+		int daysToMonday = ((int)date.DayOfWeek - 1 + 7) % 7;
+		return date.AddDays(-daysToMonday).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 	}
 }

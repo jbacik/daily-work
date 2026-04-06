@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import client from '@/api/client'
 import type { WorkItem } from '@/types'
+import { getWeekStart } from '@/utils/week'
 
 export const useWorkItemsStore = defineStore('workItems', () => {
   const items = ref<WorkItem[]>([])
@@ -10,9 +11,9 @@ export const useWorkItemsStore = defineStore('workItems', () => {
     items.value.find((i) => i.category === 'BigThing') ?? null
   )
 
-  async function fetch(date?: string) {
-    const params = date ? { date } : {}
-    items.value = await client.get('/api/work-items', { params }) as any
+  async function fetch(week?: string) {
+    const weekOf = week ?? getWeekStart()
+    items.value = await client.get('/api/work-items', { params: { weekOf } }) as any
   }
 
   async function create(title: string) {

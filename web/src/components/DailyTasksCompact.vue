@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { DAYS } from '@/utils/week'
 
@@ -8,6 +9,9 @@ const store = useDailyTasksStore()
 const newTask = ref('')
 const addingForDay = ref<number | null>(null)
 const addInputRef = ref<HTMLInputElement | null>(null)
+const editingTaskId = ref<number | null>(null)
+const editingValue = ref('')
+const editOriginalValue = ref('')
 
 const displayDays = computed(() => {
   const day = store.currentDay
@@ -23,6 +27,10 @@ const displayDays = computed(() => {
 
 function isOutOfRange(index: number) {
   return index < 0 || index >= 5
+}
+
+function isEditable(label: string) {
+  return label === 'TODAY' || label === 'TOMORROW'
 }
 
 function startAdding(day: number) {
@@ -46,11 +54,21 @@ function blurAdd(day: number) {
 
 async function handleAddTask(day: number) {
   if (!newTask.value.trim()) return
-  if (store.getTasksForDay(day).length >= 3) return
+  if (store.getTasksForDay(day).length >= 5) return
 
   await store.create(newTask.value.trim(), day)
   newTask.value = ''
-  addingForDay.value = null
+
+  // Stay in add mode if still room
+  if (store.getTasksForDay(day).length < 5) {
+    nextTick(() => {
+      const el = addInputRef.value
+      if (Array.isArray(el)) el[0]?.focus()
+      else el?.focus()
+    })
+  } else {
+    addingForDay.value = null
+  }
 }
 
 async function toggleTask(id: number, currentDone: boolean) {
@@ -58,7 +76,38 @@ async function toggleTask(id: number, currentDone: boolean) {
 }
 
 async function deleteTask(id: number) {
+  if (editingTaskId.value === id) cancelEdit()
   await store.remove(id)
+}
+
+function startEdit(id: number, currentTitle: string) {
+  editingTaskId.value = id
+  editingValue.value = currentTitle
+  editOriginalValue.value = currentTitle
+}
+
+const saveEditDebounced = useDebounceFn(async () => {
+  if (editingTaskId.value === null) return
+  await store.update(editingTaskId.value, { title: editingValue.value })
+}, 500)
+
+function onEditInput() {
+  if (editingTaskId.value === null) return
+  saveEditDebounced()
+}
+
+async function commitEdit() {
+  if (editingTaskId.value === null) return
+  const id = editingTaskId.value
+  editingTaskId.value = null
+  if (editingValue.value.trim()) {
+    await store.update(id, { title: editingValue.value.trim() })
+  }
+}
+
+function cancelEdit() {
+  editingTaskId.value = null
+  editingValue.value = editOriginalValue.value
 }
 </script>
 
@@ -69,7 +118,7 @@ async function deleteTask(id: number) {
       <span>ls -la /tasks/today/</span>
     </div>
 
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid gap-3" style="grid-template-columns: 1fr 2fr 1fr">
       <div
         v-for="{ index, label, shortLabel } in displayDays"
         :key="label"
@@ -103,31 +152,54 @@ async function deleteTask(id: number) {
 
         <div v-else class="space-y-2">
           <div
-            v-for="task in store.getTasksForDay(index)"
+            v-for="(task, taskIndex) in store.getTasksForDay(index)"
             :key="task.id"
             class="flex items-start gap-2 text-sm group"
           >
-            <button class="flex-shrink-0" @click="toggleTask(task.id, task.isDone)">
+            <button
+              class="flex-shrink-0"
+              data-testid="task-toggle"
+              @click="toggleTask(task.id, task.isDone)"
+            >
               <span v-if="task.isDone" class="text-primary">[x]</span>
               <span v-else class="text-muted-foreground">[ ]</span>
             </button>
+
+            <!-- Inline edit input (today + tomorrow only) -->
+            <input
+              v-if="editingTaskId === task.id"
+              v-model="editingValue"
+              type="text"
+              class="flex-1 bg-transparent border-none outline-none text-foreground text-sm w-full"
+              data-testid="task-title-input"
+              @input="onEditInput"
+              @keydown.enter.prevent="commitEdit"
+              @keydown.escape.prevent="cancelEdit"
+              @blur="commitEdit"
+            />
             <span
+              v-else
               :class="[
                 'flex-1 break-words',
-                task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
+                taskIndex >= 3 ? 'text-muted-foreground/60' : task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
+                isEditable(label) ? 'cursor-text' : '',
               ]"
+              data-testid="task-title"
+              @click="isEditable(label) ? startEdit(task.id, task.title) : undefined"
             >
               {{ task.title }}
             </span>
+
             <button
               class="opacity-0 group-hover:opacity-100 text-destructive text-xs"
+              data-testid="task-delete"
               @click="deleteTask(task.id)"
             >
               x
             </button>
           </div>
 
-          <div v-if="store.getTasksForDay(index).length < 3">
+          <div v-if="store.getTasksForDay(index).length < 5">
             <div v-if="addingForDay === index" class="flex items-center gap-2">
               <span class="text-primary text-sm">&gt;</span>
               <input
@@ -135,15 +207,22 @@ async function deleteTask(id: number) {
                 v-model="newTask"
                 type="text"
                 class="flex-1 bg-transparent border-none outline-none text-foreground text-sm w-full"
+                data-testid="add-task-input"
                 placeholder="task..."
-                @keydown.enter="handleAddTask(index)"
+                @keydown.enter.prevent="handleAddTask(index)"
                 @keydown.escape="cancelAdd"
                 @blur="blurAdd(index)"
               />
             </div>
             <button
               v-else
-              class="text-muted-foreground hover:text-primary text-sm"
+              :class="[
+                'text-sm',
+                store.getTasksForDay(index).length >= 3
+                  ? 'text-accent hover:text-accent/80'
+                  : 'text-muted-foreground hover:text-primary',
+              ]"
+              data-testid="add-task-btn"
               @click="startAdding(index)"
             >
               + add

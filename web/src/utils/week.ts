@@ -14,3 +14,9 @@ export function getCurrentDayIndex(): number {
   if (day === 6) return 5  // Saturday
   return day - 1           // Mon=0, Tue=1, etc.
 }
+
+export function getDateForDayIndex(dayIndex: number, weekStart?: string): string {
+  const monday = new Date(weekStart ?? getWeekStart())
+  monday.setDate(monday.getDate() + dayIndex)
+  return monday.toISOString().split('T')[0]!
+}
