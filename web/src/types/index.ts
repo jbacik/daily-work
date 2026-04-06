@@ -1,16 +1,9 @@
 export interface WorkItem {
   id: number
   title: string
-  category: 'BigThing'
+  category: 'BigThing' | 'SmallThing'
   isDone: boolean
   date: string
-}
-
-export interface DailyTask {
-  id: number
-  title: string
-  isDone: boolean
-  day: number // 0-4 for Mon-Fri
   weekOf: string
 }
 

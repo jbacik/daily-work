@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { useDebounceFn } from '@/utils/debounce'
+import { useDebounceFn } from '@vueuse/core'
 
 const store = useScratchPadStore()
 
