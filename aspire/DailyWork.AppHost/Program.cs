@@ -7,8 +7,13 @@ var postgres = builder.AddPostgres("postgres")
 
 var db = postgres.AddDatabase("dailywork");
 
-builder.AddProject<Projects.DailyWork_Api>("api")
+var api = builder.AddProject<Projects.DailyWork_Api>("api")
     .WithReference(db)
     .WaitFor(db);
+
+builder.AddViteApp("web", "../../web")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithEnvironment("VITE_API_URL", api.GetEndpoint("http"));
 
 builder.Build().Run();
