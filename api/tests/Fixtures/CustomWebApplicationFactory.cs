@@ -1,3 +1,4 @@
+using DailyWork.Api;
 using DailyWork.Api.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,6 +13,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
 {
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
+
+    public FakeDateTimeProvider DateTimeProvider { get; } = new FakeDateTimeProvider();
 
     async Task IAsyncLifetime.InitializeAsync()
     {
@@ -46,6 +49,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(_db.GetConnectionString()));
+
+            services.AddSingleton<IDateTimeProvider>(DateTimeProvider);
         });
     }
 }

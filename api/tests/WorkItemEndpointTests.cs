@@ -17,8 +17,11 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly CustomWebApplicationFactory _factory;
+
     public WorkItemEndpointTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -48,7 +51,7 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetWorkItems_ReturnsCreatedItem()
     {
-        var date = DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var date = _factory.DateTimeProvider.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         var payload = new { Title = "Integration test item", Category = "BigThing", Date = date };
         await _client.PostAsJsonAsync("/api/work-items", payload);
 

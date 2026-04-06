@@ -1,3 +1,4 @@
+using DailyWork.Api;
 using DailyWork.Api.Data;
 using DailyWork.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.AddNpgsqlDbContext<AppDbContext>("dailywork");
+builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>

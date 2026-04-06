@@ -11,18 +11,18 @@ internal static class ReadWatchEndpoints
 	{
 		var group = app.MapGroup("/api/read-watch");
 
-		group.MapGet("/", async (AppDbContext db, DateTime? date) =>
+		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateTime? date) =>
 		{
-			var d = UtcDate(date ?? DateTime.UtcNow);
+			var d = UtcDate(date ?? dateTime.UtcNow);
 			return await db.ReadWatchItems
 				.Where(r => r.Date == d)
 				.OrderBy(r => r.CreatedAt)
 				.ToListAsync();
 		});
 
-		group.MapPost("/", async (AppDbContext db, CreateReadWatchItemDto dto) =>
+		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateReadWatchItemDto dto) =>
 		{
-			var d = UtcDate(dto.Date ?? DateTime.UtcNow);
+			var d = UtcDate(dto.Date ?? dateTime.UtcNow);
 			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d);
 			if (count >= 5)
 			{

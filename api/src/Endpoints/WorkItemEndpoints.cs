@@ -12,16 +12,16 @@ internal static class WorkItemEndpoints
 	{
 		var group = app.MapGroup("/api/work-items");
 
-		group.MapGet("/", async (AppDbContext db, DateTime? date) =>
+		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateTime? date) =>
 		{
-			var d = UtcDate(date ?? DateTime.UtcNow);
+			var d = UtcDate(date ?? dateTime.UtcNow);
 			return await db.WorkItems
 				.Where(w => w.Date == d)
 				.OrderBy(w => w.CreatedAt)
 				.ToListAsync();
 		});
 
-		group.MapPost("/", async (AppDbContext db, CreateWorkItemDto dto) =>
+		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateWorkItemDto dto) =>
 		{
 			var item = new WorkItem
 			{
@@ -29,7 +29,7 @@ internal static class WorkItemEndpoints
 				Category = Enum.TryParse<WorkItemCategory>(dto.Category, out var cat)
 					? cat
 					: WorkItemCategory.SmallThing,
-				Date = UtcDate(dto.Date ?? DateTime.UtcNow)
+				Date = UtcDate(dto.Date ?? dateTime.UtcNow)
 			};
 			db.WorkItems.Add(item);
 			await db.SaveChangesAsync();
