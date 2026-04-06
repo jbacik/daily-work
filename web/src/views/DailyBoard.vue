@@ -104,13 +104,11 @@ onMounted(() => {
       <BigThing />
 
       <!-- Daily View -->
-      <main v-if="view === 'daily'" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div class="lg:col-span-2 space-y-6">
-          <DailyTasksCompact />
-          <ReadWatchList />
-        </div>
-        <div class="space-y-6">
+      <main v-if="view === 'daily'" class="space-y-6 mt-6">
+        <DailyTasksCompact />
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ScratchPad />
+          <ReadWatchList />
         </div>
       </main>
 
