@@ -11,7 +11,7 @@ namespace DailyWork.Api.Tests.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16-alpine")
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16.8-alpine")
         .Build();
 
     public FakeDateTimeProvider DateTimeProvider { get; } = new FakeDateTimeProvider();
@@ -25,7 +25,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
         await db.Database.MigrateAsync();
     }
 
-    async Task IAsyncLifetime.DisposeAsync() => await _db.StopAsync();
+    async Task IAsyncLifetime.DisposeAsync() => await _db.DisposeAsync();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

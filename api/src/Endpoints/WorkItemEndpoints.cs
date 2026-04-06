@@ -12,9 +12,9 @@ internal static class WorkItemEndpoints
 	{
 		var group = app.MapGroup("/api/work-items");
 
-		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateTime? date) =>
+		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly? date) =>
 		{
-			var d = UtcDate(date ?? dateTime.UtcNow);
+			var d = date ?? dateTime.UtcToday;
 			return await db.WorkItems
 				.Where(w => w.Date == d)
 				.OrderBy(w => w.CreatedAt)
@@ -29,7 +29,7 @@ internal static class WorkItemEndpoints
 				Category = Enum.TryParse<WorkItemCategory>(dto.Category, out var cat)
 					? cat
 					: WorkItemCategory.SmallThing,
-				Date = UtcDate(dto.Date ?? dateTime.UtcNow)
+				Date = dto.Date ?? dateTime.UtcToday
 			};
 			db.WorkItems.Add(item);
 			await db.SaveChangesAsync();
@@ -108,9 +108,4 @@ internal static class WorkItemEndpoints
 
 		return group;
 	}
-
-	// Normalize any DateTime to UTC midnight so date comparisons work consistently
-	// regardless of the server's local timezone.
-	private static DateTime UtcDate(DateTime d) =>
-		DateTime.SpecifyKind(d.Date, DateTimeKind.Utc);
 }

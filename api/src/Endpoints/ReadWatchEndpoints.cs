@@ -11,9 +11,9 @@ internal static class ReadWatchEndpoints
 	{
 		var group = app.MapGroup("/api/read-watch");
 
-		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateTime? date) =>
+		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly? date) =>
 		{
-			var d = UtcDate(date ?? dateTime.UtcNow);
+			var d = date ?? dateTime.UtcToday;
 			return await db.ReadWatchItems
 				.Where(r => r.Date == d)
 				.OrderBy(r => r.CreatedAt)
@@ -22,7 +22,7 @@ internal static class ReadWatchEndpoints
 
 		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateReadWatchItemDto dto) =>
 		{
-			var d = UtcDate(dto.Date ?? dateTime.UtcNow);
+			var d = dto.Date ?? dateTime.UtcToday;
 			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d);
 			if (count >= 5)
 			{
@@ -80,9 +80,4 @@ internal static class ReadWatchEndpoints
 
 		return group;
 	}
-
-	// Normalize any DateTime to UTC midnight so date comparisons work consistently
-	// regardless of the server's local timezone.
-	private static DateTime UtcDate(DateTime d) =>
-		DateTime.SpecifyKind(d.Date, DateTimeKind.Utc);
 }

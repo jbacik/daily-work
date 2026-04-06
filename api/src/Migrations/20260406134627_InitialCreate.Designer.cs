@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DailyWork.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406002821_InitialCreate")]
+    [Migration("20260406134627_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,8 +36,8 @@ namespace DailyWork.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
 
                     b.Property<bool>("IsDone")
                         .HasColumnType("boolean");
@@ -71,8 +71,8 @@ namespace DailyWork.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
 
                     b.Property<bool>("IsDone")
                         .HasColumnType("boolean");
