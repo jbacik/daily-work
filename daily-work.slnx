@@ -11,6 +11,10 @@
     <Project Path="api/src/DailyWork.Api.csproj" />
     <Project Path="api/tests/DailyWork.Api.Tests.csproj" />
   </Folder>
+  <Folder Name="/aspire/">
+    <Project Path="aspire/DailyWork.AppHost/DailyWork.AppHost.csproj" />
+    <Project Path="aspire/DailyWork.ServiceDefaults/DailyWork.ServiceDefaults.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
   </Folder>

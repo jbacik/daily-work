@@ -48,10 +48,11 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetWorkItems_ReturnsCreatedItem()
     {
-        var payload = new { Title = "Integration test item", Category = "BigThing" };
+        var date = DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var payload = new { Title = "Integration test item", Category = "BigThing", Date = date };
         await _client.PostAsJsonAsync("/api/work-items", payload);
 
-        var response = await _client.GetAsync($"/api/work-items?date={DateTime.Today:yyyy-MM-dd}");
+        var response = await _client.GetAsync($"/api/work-items?date={date}");
 
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
