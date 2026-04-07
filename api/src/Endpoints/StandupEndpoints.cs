@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using DailyWork.Api.Data;
 using DailyWork.Api.Dtos;
 using DailyWork.Api.Entities;
-using DailyWork.Api.Enums;
 using DailyWork.Api.Prompts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel.ChatCompletion;
