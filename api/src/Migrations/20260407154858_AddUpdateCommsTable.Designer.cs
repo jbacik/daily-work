@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DailyWork.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260407132344_AddStandupEntryTable")]
-    partial class AddStandupEntryTable
+    [Migration("20260407154858_AddUpdateCommsTable")]
+    partial class AddUpdateCommsTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,13 +57,16 @@ namespace DailyWork.Api.Migrations
                     b.ToTable("ReadWatchItems");
                 });
 
-            modelBuilder.Entity("DailyWork.Api.Entities.StandupEntry", b =>
+            modelBuilder.Entity("DailyWork.Api.Entities.UpdateComm", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CommType")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -77,10 +80,14 @@ namespace DailyWork.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Date")
+                    b.HasIndex("Date", "CommType")
                         .IsUnique();
 
-                    b.ToTable("StandupEntries");
+                    b.ToTable("UpdateComms", (string)null);
+
+                    b.HasDiscriminator<int>("CommType");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("DailyWork.Api.Entities.WorkItem", b =>
@@ -118,6 +125,20 @@ namespace DailyWork.Api.Migrations
                     b.HasIndex("Date", "Category");
 
                     b.ToTable("WorkItems");
+                });
+
+            modelBuilder.Entity("DailyWork.Api.Entities.DailyStandupComm", b =>
+                {
+                    b.HasBaseType("DailyWork.Api.Entities.UpdateComm");
+
+                    b.HasDiscriminator().HasValue(1);
+                });
+
+            modelBuilder.Entity("DailyWork.Api.Entities.WeeklyUpdateComm", b =>
+                {
+                    b.HasBaseType("DailyWork.Api.Entities.UpdateComm");
+
+                    b.HasDiscriminator().HasValue(2);
                 });
 #pragma warning restore 612, 618
         }
