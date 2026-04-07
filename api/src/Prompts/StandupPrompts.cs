@@ -36,7 +36,7 @@ internal static class StandupPrompts
         **Start Insights work — examine PDL payload/data store**, feeding into the weekly goal of **Data Products support**. Also on deck: Submit AI Qualifying Race, Align on CRM+ OKRs, Sync with Ali.
 
         **Do you have any upcoming PTO or unavailability the team should know about?**
-        [Leave blank]
+        No
 
         Style rules:
         - Write in first person. This gets pasted into Geekbot.

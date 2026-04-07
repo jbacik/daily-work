@@ -1,0 +1,17 @@
+@host = http://localhost:5062
+
+### Generate standup (mid-week, current week)
+POST {{host}}/api/standup/generate?weekOf=2026-04-06
+Content-Type: application/json
+
+### Generate standup (weekly summary)
+POST {{host}}/api/standup/generate?weekOf=2026-04-06&commandType=weekly
+Content-Type: application/json
+
+### Generate standup (no items — expects 400)
+POST {{host}}/api/standup/generate?weekOf=1999-01-04
+Content-Type: application/json
+
+### Generate standup (missing weekOf — expects 400)
+POST {{host}}/api/standup/generate
+Content-Type: application/json
