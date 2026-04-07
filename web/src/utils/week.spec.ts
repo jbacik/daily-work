@@ -44,6 +44,12 @@ describe('week utils', () => {
       const result = getWeekStart()
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     })
+
+    it('getWeekStart_ReturnsCorrectDate_WhenLateEvening', () => {
+      vi.setSystemTime(new Date('2026-04-07T03:00:00Z')) // Monday 11 PM EDT (UTC-4)
+
+      expect(getWeekStart()).toBe('2026-04-06')
+    })
   })
 
   describe('getCurrentDayIndex', () => {
@@ -111,6 +117,13 @@ describe('week utils', () => {
 
     it('getDateForDayIndex_WorksAcrossMonthBoundary', () => {
       expect(getDateForDayIndex(4, '2026-03-30')).toBe('2026-04-03')
+    })
+
+    it('getDateForDayIndex_ReturnsCorrectDate_WhenLateEvening', () => {
+      vi.setSystemTime(new Date('2026-04-07T03:00:00Z')) // Monday 11 PM EDT
+
+      expect(getDateForDayIndex(0)).toBe('2026-04-06')
+      expect(getDateForDayIndex(4)).toBe('2026-04-10')
     })
   })
 
