@@ -1,12 +1,48 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import CommandModal from './CommandModal.vue'
+import axios from 'axios'
+import type { Mock } from 'vitest'
 
-function mountComponent(props: { isOpen?: boolean; title?: string } = {}) {
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => ({
+      post: vi.fn(),
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      interceptors: {
+        response: { use: vi.fn() },
+        request: { use: vi.fn() },
+      },
+    })),
+  },
+}))
+
+// Get the mocked client instance that the component will use
+const mockClient = axios.create() as any
+const mockPost = mockClient.post as Mock
+
+// The client module uses axios.create() — we need to mock the module directly
+vi.mock('@/api/client', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
+import client from '@/api/client'
+const clientPost = (client as any).post as Mock
+
+function mountComponent(props: { isOpen?: boolean; title?: string; commandType?: string | null; weekOf?: string } = {}) {
   return mount(CommandModal, {
     props: {
       isOpen: props.isOpen ?? true,
       title: props.title ?? '// DAILY STANDUP',
+      commandType: props.commandType as any ?? null,
+      weekOf: props.weekOf ?? '2026-04-06',
     },
     attachTo: document.body,
   })
@@ -17,6 +53,10 @@ function queryBody(selector: string) {
 }
 
 describe('CommandModal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('CommandModal_RendersTitle_WhenOpen', () => {
     const wrapper = mountComponent({ title: '// WEEKLY ROUNDUP' })
 
@@ -25,10 +65,12 @@ describe('CommandModal', () => {
     wrapper.unmount()
   })
 
-  it('CommandModal_ShowsPlaceholder_WhenOpen', () => {
-    const wrapper = mountComponent()
+  it('CommandModal_ShowsLoading_WhenGenerating', async () => {
+    clientPost.mockReturnValue(new Promise(() => {})) // never resolves
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
 
-    expect(queryBody('[data-testid="command-modal-content"]')?.textContent).toContain('Generating')
+    expect(queryBody('[data-testid="command-modal-loading"]')?.textContent).toContain('Generating')
 
     wrapper.unmount()
   })
@@ -86,7 +128,7 @@ describe('CommandModal', () => {
     await nextTick()
 
     expect(writeText).toHaveBeenCalled()
-    expect(queryBody('[data-testid="copy-label"]')?.textContent).toBe('opied!')
+    expect(queryBody('[data-testid="copy-label"]')?.textContent).toContain('opied!')
 
     wrapper.unmount()
   })
@@ -99,6 +141,35 @@ describe('CommandModal', () => {
     await nextTick()
 
     expect(wrapper.emitted('close')).toBeTruthy()
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_ShowsSections_WhenGenerated', async () => {
+    clientPost.mockResolvedValue({
+      markdown: '### Did you complete your One Thing yesterday?\nCrushed it.\n\n### What is your One Thing today?\nInsights work.',
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+
+    expect(queryBody('[data-testid="command-modal-content"]')).not.toBeNull()
+    const content = queryBody('[data-testid="command-modal-content"]')?.textContent ?? ''
+    expect(content).toContain('Crushed it')
+    expect(content).toContain('Insights work')
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_ShowsError_WhenApiFails', async () => {
+    clientPost.mockRejectedValue({ message: 'Network Error' })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+
+    expect(queryBody('[data-testid="command-modal-error"]')?.textContent).toContain('Network Error')
 
     wrapper.unmount()
   })

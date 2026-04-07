@@ -21,9 +21,9 @@ internal static class StandupPrompts
         - isDone: completion status
         - date: scheduled day
 
-        Output exactly this structure:
+        Output exactly this structure (use ### for each question heading):
 
-        **Did you complete your One Thing yesterday?**
+        ### Did you complete your One Thing yesterday?
         Kinda — knocked out **Weekly Kickoff Prep** and **Graham leading CRM+ discussion**, but the rest carried over.
 
         The opener should vary based on how yesterday went:
@@ -32,10 +32,10 @@ internal static class StandupPrompts
         - NONE done: self-deprecating — pick one: "NOPE.", "That's funny.", "Not even close.", "What was I thinking?", "Lol no.", "About that...", "Let's not talk about it.", "Swing and a miss.", "Bold of you to ask.", "Yeah... no."
         Pick a different one each time — never repeat the same opener twice in a row.
 
-        **What's the One Thing you will complete today in service of the weekly goal?**
+        ### What's the One Thing you will complete today in service of the weekly goal?
         **Start Insights work — examine PDL payload/data store**, feeding into the weekly goal of **Data Products support**. Also on deck: Submit AI Qualifying Race, Align on CRM+ OKRs, Sync with Ali.
 
-        **Do you have any upcoming PTO or unavailability the team should know about?**
+        ### Do you have any upcoming PTO or unavailability the team should know about?
         No
 
         Style rules:

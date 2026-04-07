@@ -129,6 +129,8 @@ onMounted(() => {
       <CommandModal
         :is-open="activeCommand !== null"
         :title="modalTitle"
+        :command-type="activeCommand"
+        :week-of="dailyTasks.weekOf"
         @save="handleSave"
         @close="activeCommand = null"
       />
