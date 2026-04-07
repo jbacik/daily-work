@@ -53,6 +53,15 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@utility animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

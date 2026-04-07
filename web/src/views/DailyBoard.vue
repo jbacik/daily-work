@@ -5,6 +5,7 @@ import { useReadWatchStore } from '@/stores/readWatch'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useScratchPadStore } from '@/stores/scratchPad'
 import { DAYS } from '@/utils/week'
+import type { CommandType } from '@/types'
 import BigThing from '@/components/BigThing.vue'
 import DailyTasks from '@/components/DailyTasks.vue'
 import DailyTasksCompact from '@/components/DailyTasksCompact.vue'
@@ -12,6 +13,8 @@ import WeekOverview from '@/components/WeekOverview.vue'
 import ReadWatchList from '@/components/ReadWatchList.vue'
 import ScratchPad from '@/components/ScratchPad.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
+import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
+import CommandModal from '@/components/CommandModal.vue'
 
 type ViewMode = 'daily' | 'weekly'
 
@@ -22,6 +25,19 @@ const scratchPad = useScratchPadStore()
 
 const launchTime = new Date()
 const view = ref<ViewMode>('daily')
+const activeCommand = ref<CommandType | null>(null)
+
+const modalTitle = computed(() => {
+  switch (activeCommand.value) {
+    case 'standup': return '// DAILY STANDUP'
+    case 'weekly': return '// WEEKLY ROUNDUP'
+    default: return ''
+  }
+})
+
+function handleCommand(type: CommandType) {
+  activeCommand.value = type
+}
 
 const currentDayLabel = computed((): string => {
   const day = dailyTasks.currentDay
@@ -97,11 +113,21 @@ onMounted(() => {
         </div>
 
         <div class="text-xs text-muted-foreground border-t border-b border-border py-2">
-          <span class="text-primary">tip:</span> Click Week/Day above to switch views • Tasks auto-save
+          <span class="text-primary">tip:</span> Click Week/Day above to switch views • Tasks auto-save locally • Press / for more actions
         </div>
       </header>
 
+      <SlashCommandMenu @command="handleCommand" />
+
       <BigThing />
+
+      <CommandModal
+        :is-open="activeCommand !== null"
+        :title="modalTitle"
+        :command-type="activeCommand"
+        :week-of="dailyTasks.weekOf"
+        @close="activeCommand = null"
+      />
 
       <!-- Daily View -->
       <main v-if="view === 'daily'" class="space-y-6 mt-6">

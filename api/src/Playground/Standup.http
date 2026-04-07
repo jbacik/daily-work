@@ -1,0 +1,32 @@
+@host = http://localhost:5062
+
+### Generate standup (mid-week, current week)
+POST {{host}}/api/standup/generate?weekOf=2026-04-06
+Content-Type: application/json
+
+### Generate standup (weekly summary)
+POST {{host}}/api/standup/generate?weekOf=2026-04-06&commandType=weekly
+Content-Type: application/json
+
+### Generate standup (no items — expects 400)
+POST {{host}}/api/standup/generate?weekOf=1999-01-04
+Content-Type: application/json
+
+### Generate standup (missing weekOf — expects 400)
+POST {{host}}/api/standup/generate
+Content-Type: application/json
+
+### Get saved standup for today
+GET {{host}}/api/standup?date=2026-04-07
+
+### Save standup
+POST {{host}}/api/standup
+Content-Type: application/json
+
+{
+  "markdown": "### Did you complete your One Thing yesterday?\nCrushed it.",
+  "date": "2026-04-07"
+}
+
+### Get saved standup (no entry — expects 404)
+GET {{host}}/api/standup?date=1999-01-01

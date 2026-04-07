@@ -1,4 +1,5 @@
 using DailyWork.Api.Entities;
+using DailyWork.Api.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace DailyWork.Api.Data;
@@ -7,6 +8,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 {
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<ReadWatchItem> ReadWatchItems => Set<ReadWatchItem>();
+    public DbSet<UpdateComm> UpdateComms => Set<UpdateComm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,15 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
         modelBuilder.Entity<ReadWatchItem>(e =>
         {
             e.HasIndex(r => r.Date);
+        });
+
+        modelBuilder.Entity<UpdateComm>(e =>
+        {
+            e.ToTable("UpdateComms");
+            e.HasDiscriminator(c => c.CommType)
+             .HasValue<DailyStandupComm>(CommType.DailyStandup)
+             .HasValue<WeeklyUpdateComm>(CommType.WeeklyUpdate);
+            e.HasIndex(c => new { c.Date, c.CommType }).IsUnique();
         });
     }
 }

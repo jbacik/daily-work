@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -15,6 +16,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
         .Build();
 
     public FakeDateTimeProvider DateTimeProvider { get; } = new FakeDateTimeProvider();
+    public FakeChatCompletionService ChatCompletionService { get; } = new();
 
     async Task IAsyncLifetime.InitializeAsync()
     {
@@ -51,6 +53,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
                 options.UseNpgsql(_db.GetConnectionString()));
 
             services.AddSingleton<IDateTimeProvider>(DateTimeProvider);
+            services.AddSingleton<IChatCompletionService>(ChatCompletionService);
         });
     }
 }
