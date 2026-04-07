@@ -22,15 +22,16 @@ internal static class StandupEndpoints
     {
         var group = app.MapGroup("/api/standup");
 
-        group.MapGet("/", async (AppDbContext db, string? date) =>
+        group.MapGet("/", async (AppDbContext db, string? date, string? commandType) =>
         {
             if (date is null)
                 return Results.BadRequest("date query parameter is required.");
 
             var parsedDate = DateOnly.Parse(date, CultureInfo.InvariantCulture);
-            var entry = await db.StandupEntries
+            var type = ResolveCommType(commandType);
+            var entry = await db.UpdateComms
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Date == parsedDate);
+                .FirstOrDefaultAsync(c => c.Date == parsedDate && c.CommType == type);
 
             if (entry is null)
                 return Results.NotFound();
@@ -38,10 +39,11 @@ internal static class StandupEndpoints
             return Results.Ok(new { entry.Markdown, Date = entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
         });
 
-        group.MapPost("/", async (AppDbContext db, SaveStandupDto dto) =>
+        group.MapPost("/", async (AppDbContext db, SaveUpdateCommDto dto) =>
         {
             var date = DateOnly.Parse(dto.Date, CultureInfo.InvariantCulture);
-            var entry = await db.StandupEntries.FirstOrDefaultAsync(s => s.Date == date);
+            var type = ResolveCommType(dto.CommandType);
+            var entry = await db.UpdateComms.FirstOrDefaultAsync(c => c.Date == date && c.CommType == type);
 
             if (entry is not null)
             {
@@ -49,8 +51,10 @@ internal static class StandupEndpoints
             }
             else
             {
-                entry = new StandupEntry { Date = date, Markdown = dto.Markdown };
-                db.StandupEntries.Add(entry);
+                entry = type == CommType.WeeklyUpdate
+                    ? new WeeklyUpdateComm { Date = date, Markdown = dto.Markdown }
+                    : new DailyStandupComm { Date = date, Markdown = dto.Markdown };
+                db.UpdateComms.Add(entry);
             }
 
             await db.SaveChangesAsync();
@@ -60,10 +64,13 @@ internal static class StandupEndpoints
         group.MapPost("/generate", async (
             AppDbContext db,
             IDateTimeProvider dateTime,
-            IChatCompletionService chatService,
+            IChatCompletionService? chatService,
             string? weekOf,
             string? commandType) =>
         {
+            if (chatService is null)
+                return Results.Problem("Azure OpenAI is not configured.", statusCode: 503);
+
             if (weekOf is null)
                 return Results.BadRequest("weekOf query parameter is required.");
 
@@ -115,4 +122,9 @@ internal static class StandupEndpoints
 
         return group;
     }
+
+    private static CommType ResolveCommType(string? commandType) =>
+        string.Equals(commandType, "weekly", StringComparison.OrdinalIgnoreCase)
+            ? CommType.WeeklyUpdate
+            : CommType.DailyStandup;
 }

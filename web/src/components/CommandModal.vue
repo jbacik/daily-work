@@ -44,13 +44,15 @@ function todayString(): string {
 }
 
 async function handleSave() {
-  if (sections.value.length === 0 || saveState.value === 'saving') return
+  const markdown = getContent().trim()
+  if (!markdown || saveState.value === 'saving') return
 
   saveState.value = 'saving'
   try {
     await client.post('/api/standup', {
-      markdown: sectionsToMarkdown(),
+      markdown,
       date: todayString(),
+      commandType: commandType ?? 'standup',
     })
     hasSaved.value = true
     saveState.value = 'saved'
@@ -105,7 +107,7 @@ function stopDotAnimation() {
 
 async function loadSaved(): Promise<boolean> {
   try {
-    const data = await client.get('/api/standup', { params: { date: todayString() } }) as any
+    const data = await client.get('/api/standup', { params: { date: todayString(), commandType: commandType ?? 'standup' } }) as any
     if (data?.markdown) {
       sections.value = parseMarkdown(data.markdown)
       hasSaved.value = true
