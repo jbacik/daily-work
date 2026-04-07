@@ -1,17 +1,30 @@
 <script setup lang="ts">
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { useDebounceFn } from '@vueuse/core'
 
 const store = useScratchPadStore()
 
-const debouncedSave = useDebounceFn(() => {
-  store.save()
-}, 1000)
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function cancelPendingSave() {
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+}
 
 function handleInput(event: Event) {
   const value = (event.target as HTMLTextAreaElement).value
   store.setContent(value)
-  debouncedSave()
+  cancelPendingSave()
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    store.save()
+  }, 1000)
+}
+
+async function handleClean() {
+  cancelPendingSave()
+  await store.clean()
 }
 </script>
 
@@ -39,6 +52,13 @@ function handleInput(event: Event) {
 
       <div class="flex items-center justify-between px-3 py-1 border-t border-border text-xs text-muted-foreground">
         <span>-- INSERT --</span>
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-destructive transition-colors"
+          @click="handleClean()"
+        >
+          -- CLEAN --
+        </button>
         <span>{{ store.content.length }} chars</span>
       </div>
     </div>

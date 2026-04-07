@@ -46,5 +46,6 @@ app.MapDefaultEndpoints();
 app.MapWorkItemEndpoints();
 app.MapReadWatchEndpoints();
 app.MapStandupEndpoints();
+app.MapScratchPadEndpoints();
 
 app.Run();
