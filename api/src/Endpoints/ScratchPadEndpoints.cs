@@ -13,16 +13,16 @@ internal static class ScratchPadEndpoints
 
         group.MapGet("/", async (AppDbContext db) =>
         {
-            var entry = await db.ScratchPads.FirstOrDefaultAsync(s => s.IsActive);
+            var entry = await db.ScratchPads.SingleOrDefaultAsync(s => s.IsActive);
             if (entry is null)
-                return Results.Ok(new { content = (string?)null, isActive = true });
+                return Results.Ok(new { content = (string?)null, isActive = false });
 
             return Results.Ok(entry);
         });
 
         group.MapPut("/", async (AppDbContext db, UpsertScratchPadDto dto) =>
         {
-            var entry = await db.ScratchPads.FirstOrDefaultAsync(s => s.IsActive);
+            var entry = await db.ScratchPads.SingleOrDefaultAsync(s => s.IsActive);
 
             if (entry is not null)
             {
@@ -41,7 +41,7 @@ internal static class ScratchPadEndpoints
 
         group.MapPost("/clean", async (AppDbContext db) =>
         {
-            var entry = await db.ScratchPads.FirstOrDefaultAsync(s => s.IsActive);
+            var entry = await db.ScratchPads.SingleOrDefaultAsync(s => s.IsActive);
             if (entry is null)
                 return Results.NoContent();
 
