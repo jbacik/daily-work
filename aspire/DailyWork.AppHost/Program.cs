@@ -1,9 +1,13 @@
+const string dockerProject = "jb_daily-work";
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
     .WithDataVolume("dailywork-postgres-data")
     .WithLifetime(ContainerLifetime.Persistent)
-    .WithPgAdmin();
+    .WithContainerRuntimeArgs("--label", $"com.docker.compose.project={dockerProject}")
+    .WithPgAdmin(pgAdmin => pgAdmin
+        .WithContainerRuntimeArgs("--label", $"com.docker.compose.project={dockerProject}"));
 
 var db = postgres.AddDatabase("dailywork");
 
