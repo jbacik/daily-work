@@ -19,8 +19,12 @@ export const useScratchPadStore = defineStore('scratchPad', () => {
   }
 
   async function clean() {
-    await client.post('/api/scratchpad/clean', {})
-    content.value = ''
+    try {
+      await client.post('/api/scratchpad/clean', {})
+      content.value = ''
+    } catch {
+      // Do not clear content if the request failed
+    }
   }
 
   function setContent(value: string) {

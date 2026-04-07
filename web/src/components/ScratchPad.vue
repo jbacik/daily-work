@@ -1,17 +1,30 @@
 <script setup lang="ts">
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { useDebounceFn } from '@vueuse/core'
 
 const store = useScratchPadStore()
 
-const debouncedSave = useDebounceFn(() => {
-  store.save()
-}, 1000)
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function cancelPendingSave() {
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+}
 
 function handleInput(event: Event) {
   const value = (event.target as HTMLTextAreaElement).value
   store.setContent(value)
-  debouncedSave()
+  cancelPendingSave()
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    store.save()
+  }, 1000)
+}
+
+async function handleClean() {
+  cancelPendingSave()
+  await store.clean()
 }
 </script>
 
@@ -42,7 +55,7 @@ function handleInput(event: Event) {
         <button
           type="button"
           class="text-muted-foreground hover:text-destructive transition-colors"
-          @click="store.clean()"
+          @click="handleClean()"
         >
           -- CLEAN --
         </button>
