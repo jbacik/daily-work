@@ -15,6 +15,7 @@ import ScratchPad from '@/components/ScratchPad.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
+import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
 
 type ViewMode = 'daily' | 'weekly'
 
@@ -122,10 +123,15 @@ onMounted(() => {
       <BigThing />
 
       <CommandModal
-        :is-open="activeCommand !== null"
+        :is-open="activeCommand !== null && activeCommand !== 'evaluate-my-week'"
         :title="modalTitle"
         :command-type="activeCommand"
         :week-of="dailyTasks.weekOf"
+        @close="activeCommand = null"
+      />
+
+      <EvaluateWeekModal
+        :is-open="activeCommand === 'evaluate-my-week'"
         @close="activeCommand = null"
       />
 
