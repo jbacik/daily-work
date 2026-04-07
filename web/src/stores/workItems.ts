@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import client from '@/api/client'
 import type { WorkItem } from '@/types'
-import { getWeekStart } from '@/utils/week'
+import { getWeekStart, getToday } from '@/utils/week'
 
 export const useWorkItemsStore = defineStore('workItems', () => {
   const items = ref<WorkItem[]>([])
@@ -19,7 +19,8 @@ export const useWorkItemsStore = defineStore('workItems', () => {
   async function create(title: string) {
     const item: WorkItem = await client.post('/api/work-items', {
       title,
-      category: 'BigThing'
+      category: 'BigThing',
+      date: getToday(),
     }) as any
     items.value.push(item)
   }

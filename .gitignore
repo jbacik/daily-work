@@ -25,4 +25,4 @@ dist/
 # Prototypes and Ephemeral Assets
 prototypes/
 /.claude/settings.local.json
-/.claude/settings.local.json
+prev-context/
