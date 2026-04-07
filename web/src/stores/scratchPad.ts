@@ -1,19 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import client from '@/api/client'
-import { getWeekStart } from '@/utils/week'
 
 export const useScratchPadStore = defineStore('scratchPad', () => {
   const content = ref('')
-  const weekOf = ref(getWeekStart())
 
-  async function fetch(week?: string) {
-    const targetWeek = week ?? getWeekStart()
-    weekOf.value = targetWeek
+  async function fetch() {
     try {
-      const data = await client.get('/api/scratchpad', {
-        params: { weekOf: targetWeek }
-      }) as any
+      const data = await client.get('/api/scratchpad') as any
       content.value = data?.content ?? ''
     } catch {
       content.value = ''
@@ -21,15 +15,17 @@ export const useScratchPadStore = defineStore('scratchPad', () => {
   }
 
   async function save() {
-    await client.put('/api/scratchpad', {
-      content: content.value,
-      weekOf: weekOf.value
-    })
+    await client.put('/api/scratchpad', { content: content.value })
+  }
+
+  async function clean() {
+    await client.post('/api/scratchpad/clean', {})
+    content.value = ''
   }
 
   function setContent(value: string) {
     content.value = value
   }
 
-  return { content, weekOf, fetch, save, setContent }
+  return { content, fetch, save, clean, setContent }
 })

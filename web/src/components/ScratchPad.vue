@@ -39,6 +39,13 @@ function handleInput(event: Event) {
 
       <div class="flex items-center justify-between px-3 py-1 border-t border-border text-xs text-muted-foreground">
         <span>-- INSERT --</span>
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-destructive transition-colors"
+          @click="store.clean()"
+        >
+          -- CLEAN --
+        </button>
         <span>{{ store.content.length }} chars</span>
       </div>
     </div>

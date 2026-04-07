@@ -139,15 +139,15 @@ onMounted(() => {
       </main>
 
       <!-- Weekly View -->
-      <main v-if="view === 'weekly'" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div class="lg:col-span-2 space-y-6">
-          <WeekOverview />
-          <DailyTasks />
-          <ReadWatchList :default-show-all="true" />
+      <main v-if="view === 'weekly'" class="space-y-6 mt-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2"><WeekOverview /></div>
+          <div><StatsPanel /></div>
         </div>
-        <div class="space-y-6">
-          <StatsPanel />
+        <DailyTasks />
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ScratchPad />
+          <ReadWatchList :default-show-all="true" />
         </div>
       </main>
 

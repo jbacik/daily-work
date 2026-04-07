@@ -9,6 +9,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<ReadWatchItem> ReadWatchItems => Set<ReadWatchItem>();
     public DbSet<UpdateComm> UpdateComms => Set<UpdateComm>();
+    public DbSet<ScratchPad> ScratchPads => Set<ScratchPad>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,11 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
              .HasValue<DailyStandupComm>(CommType.DailyStandup)
              .HasValue<WeeklyUpdateComm>(CommType.WeeklyUpdate);
             e.HasIndex(c => new { c.Date, c.CommType }).IsUnique();
+        });
+
+        modelBuilder.Entity<ScratchPad>(e =>
+        {
+            e.HasIndex(s => s.IsActive);
         });
     }
 }
