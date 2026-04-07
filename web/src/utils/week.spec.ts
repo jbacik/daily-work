@@ -1,9 +1,23 @@
-import { DAYS, getWeekStart, getCurrentDayIndex, getDateForDayIndex } from './week'
+import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex } from './week'
 
 describe('week utils', () => {
   describe('DAYS', () => {
     it('DAYS_ContainsFiveWorkdayAbbreviations_InOrder', () => {
       expect(DAYS).toEqual(['MON', 'TUE', 'WED', 'THU', 'FRI'])
+    })
+  })
+
+  describe('getToday', () => {
+    it('getToday_ReturnsLocalDate_WhenCalledAtNoonUTC', () => {
+      vi.setSystemTime(new Date('2026-04-06T12:00:00Z'))
+
+      expect(getToday()).toBe('2026-04-06')
+    })
+
+    it('getToday_ReturnsLocalDate_WhenLateEvening', () => {
+      vi.setSystemTime(new Date('2026-04-07T03:00:00Z')) // Monday 11 PM EDT
+
+      expect(getToday()).toBe('2026-04-06')
     })
   })
 

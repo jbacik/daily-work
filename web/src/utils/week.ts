@@ -11,6 +11,10 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00`)
 }
 
+export function getToday(): string {
+  return toLocalDateString(new Date())
+}
+
 export function getWeekStart(): string {
   const now = new Date()
   const day = now.getDay()
