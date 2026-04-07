@@ -7,6 +7,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 {
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<ReadWatchItem> ReadWatchItems => Set<ReadWatchItem>();
+    public DbSet<StandupEntry> StandupEntries => Set<StandupEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +20,11 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
         modelBuilder.Entity<ReadWatchItem>(e =>
         {
             e.HasIndex(r => r.Date);
+        });
+
+        modelBuilder.Entity<StandupEntry>(e =>
+        {
+            e.HasIndex(s => s.Date).IsUnique();
         });
     }
 }

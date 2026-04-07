@@ -69,4 +69,64 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetStandup_Returns404_WhenNoEntry()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/standup?date=1999-01-01");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SaveStandup_CreatesEntry_WhenNew()
+    {
+        // Arrange
+        var uniqueDate = "2020-02-01";
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### Did you complete?\nYes!",
+            Date = uniqueDate,
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        Assert.Equal("### Did you complete?\nYes!", result.GetProperty("markdown").GetString());
+
+        // Verify via GET
+        var getResponse = await _client.GetAsync($"/api/standup?date={uniqueDate}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var getResult = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        Assert.Contains("Yes!", getResult.GetProperty("markdown").GetString()!);
+    }
+
+    [Fact]
+    public async Task SaveStandup_UpdatesEntry_WhenExisting()
+    {
+        // Arrange
+        var uniqueDate = "2020-02-02";
+        await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### Original\nFirst version",
+            Date = uniqueDate,
+        });
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### Updated\nSecond version",
+            Date = uniqueDate,
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var getResponse = await _client.GetAsync($"/api/standup?date={uniqueDate}");
+        var result = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        Assert.Contains("Second version", result.GetProperty("markdown").GetString()!);
+    }
 }

@@ -11,16 +11,17 @@ const { isOpen, title, commandType = null, weekOf = '' } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  save: [content: string]
   close: []
 }>()
 
 const contentRef = ref<HTMLDivElement | null>(null)
 const copied = ref(false)
 const loading = ref(false)
+const saveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const error = ref<string | null>(null)
 const sections = ref<{ question: string; answer: string }[]>([])
 const copiedSection = ref<number | null>(null)
+const hasSaved = ref(false)
 const dotIndex = ref(0)
 let dotInterval: ReturnType<typeof setInterval> | null = null
 
@@ -28,9 +29,36 @@ function getContent(): string {
   return contentRef.value?.innerText ?? ''
 }
 
-function handleSave() {
-  emit('save', getContent())
-  emit('close')
+function sectionsToMarkdown(): string {
+  return sections.value
+    .map((s) => `### ${s.question}\n${s.answer}`)
+    .join('\n\n')
+}
+
+function todayString(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+async function handleSave() {
+  if (sections.value.length === 0 || saveState.value === 'saving') return
+
+  saveState.value = 'saving'
+  try {
+    await client.post('/api/standup', {
+      markdown: sectionsToMarkdown(),
+      date: todayString(),
+    })
+    hasSaved.value = true
+    saveState.value = 'saved'
+    setTimeout(() => { saveState.value = 'idle' }, 3000)
+  } catch (e: any) {
+    error.value = e?.response?.data ?? e?.message ?? 'Save failed'
+    saveState.value = 'idle'
+  }
 }
 
 function handleCopyAll() {
@@ -45,6 +73,10 @@ function handleCopySection(index: number) {
   navigator.clipboard.writeText(section.answer)
   copiedSection.value = index
   setTimeout(() => { copiedSection.value = null }, 1500)
+}
+
+function renderBold(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
 function parseMarkdown(markdown: string): { question: string; answer: string }[] {
@@ -71,12 +103,27 @@ function stopDotAnimation() {
   }
 }
 
+async function loadSaved(): Promise<boolean> {
+  try {
+    const data = await client.get('/api/standup', { params: { date: todayString() } }) as any
+    if (data?.markdown) {
+      sections.value = parseMarkdown(data.markdown)
+      hasSaved.value = true
+      return true
+    }
+  } catch {
+    // 404 or error — no saved entry, proceed to generate
+  }
+  return false
+}
+
 async function generate() {
   if (!commandType || !weekOf) return
 
   loading.value = true
   error.value = null
   sections.value = []
+  hasSaved.value = false
   startDotAnimation()
 
   try {
@@ -96,6 +143,28 @@ async function generate() {
   }
 }
 
+async function handleOpen() {
+  if (!commandType || !weekOf) return
+
+  loading.value = true
+  error.value = null
+  sections.value = []
+  startDotAnimation()
+
+  const loaded = await loadSaved()
+  if (loaded) {
+    loading.value = false
+    stopDotAnimation()
+    await nextTick()
+    placeCursorAtEnd()
+    return
+  }
+
+  loading.value = false
+  stopDotAnimation()
+  await generate()
+}
+
 function placeCursorAtEnd() {
   if (!contentRef.value) return
   contentRef.value.focus()
@@ -109,12 +178,14 @@ function placeCursorAtEnd() {
 
 watch(() => isOpen, (open) => {
   if (open) {
-    generate()
+    handleOpen()
   } else {
     stopDotAnimation()
     sections.value = []
     error.value = null
     loading.value = false
+    hasSaved.value = false
+    saveState.value = 'idle'
   }
 }, { immediate: true })
 
@@ -132,6 +203,9 @@ function handleKeyDown(e: KeyboardEvent) {
     } else if (key === 'c') {
       e.preventDefault()
       handleCopyAll()
+    } else if (key === 'r' && !loading.value && sections.value.length > 0) {
+      e.preventDefault()
+      generate()
     } else if (key === 'e') {
       e.preventDefault()
       emit('close')
@@ -193,7 +267,7 @@ onUnmounted(() => {
               <div class="flex items-start gap-2 group">
                 <div class="flex-1">
                   <div class="text-primary font-bold">{{ section.question }}</div>
-                  <div class="whitespace-pre-wrap mt-1">{{ section.answer }}</div>
+                  <div class="whitespace-pre-wrap mt-1" v-html="renderBold(section.answer)"></div>
                 </div>
                 <button
                   contenteditable="false"
@@ -215,12 +289,15 @@ onUnmounted(() => {
           <button
             data-testid="cmd-save"
             class="hover:text-primary transition-colors"
+            :disabled="saveState === 'saving'"
             @click="handleSave"
           >
             <span class="text-accent">[</span>
             <span class="text-primary font-bold">S</span>
             <span class="text-accent">]</span>
-            <span class="text-muted-foreground">ave</span>
+            <span v-if="saveState === 'saving'" class="text-muted-foreground">aving...</span>
+            <span v-else-if="saveState === 'saved'" class="text-accent">aved!</span>
+            <span v-else class="text-muted-foreground">ave</span>
           </button>
           <button
             data-testid="cmd-copy"
@@ -231,6 +308,17 @@ onUnmounted(() => {
             <span class="text-primary font-bold">C</span>
             <span class="text-accent">]</span>
             <span class="text-muted-foreground" data-testid="copy-label">{{ copied ? 'opied!' : 'opy All' }}</span>
+          </button>
+          <button
+            v-if="!loading && sections.length > 0"
+            data-testid="cmd-regenerate"
+            class="hover:text-primary transition-colors"
+            @click="generate"
+          >
+            <span class="text-accent">[</span>
+            <span class="text-primary font-bold">R</span>
+            <span class="text-accent">]</span>
+            <span class="text-muted-foreground">egenerate</span>
           </button>
           <button
             data-testid="cmd-exit"

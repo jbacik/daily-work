@@ -1,29 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import CommandModal from './CommandModal.vue'
-import axios from 'axios'
 import type { Mock } from 'vitest'
 
-vi.mock('axios', () => ({
-  default: {
-    create: vi.fn(() => ({
-      post: vi.fn(),
-      get: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      interceptors: {
-        response: { use: vi.fn() },
-        request: { use: vi.fn() },
-      },
-    })),
-  },
-}))
-
-// Get the mocked client instance that the component will use
-const mockClient = axios.create() as any
-const mockPost = mockClient.post as Mock
-
-// The client module uses axios.create() — we need to mock the module directly
 vi.mock('@/api/client', () => ({
   default: {
     post: vi.fn(),
@@ -35,6 +14,7 @@ vi.mock('@/api/client', () => ({
 
 import client from '@/api/client'
 const clientPost = (client as any).post as Mock
+const clientGet = (client as any).get as Mock
 
 function mountComponent(props: { isOpen?: boolean; title?: string; commandType?: string | null; weekOf?: string } = {}) {
   return mount(CommandModal, {
@@ -55,6 +35,8 @@ function queryBody(selector: string) {
 describe('CommandModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: no saved entry
+    clientGet.mockRejectedValue({ response: { status: 404 } })
   })
 
   it('CommandModal_RendersTitle_WhenOpen', () => {
@@ -68,6 +50,7 @@ describe('CommandModal', () => {
   it('CommandModal_ShowsLoading_WhenGenerating', async () => {
     clientPost.mockReturnValue(new Promise(() => {})) // never resolves
     const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
     await nextTick()
 
     expect(queryBody('[data-testid="command-modal-loading"]')?.textContent).toContain('Generating')
@@ -100,18 +83,6 @@ describe('CommandModal', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' }))
     await nextTick()
 
-    expect(wrapper.emitted('close')).toBeTruthy()
-
-    wrapper.unmount()
-  })
-
-  it('CommandModal_EmitsSave_WhenSPressed', async () => {
-    const wrapper = mountComponent()
-
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }))
-    await nextTick()
-
-    expect(wrapper.emitted('save')).toBeTruthy()
     expect(wrapper.emitted('close')).toBeTruthy()
 
     wrapper.unmount()
@@ -153,6 +124,7 @@ describe('CommandModal', () => {
     const wrapper = mountComponent({ commandType: 'standup' })
     await nextTick()
     await nextTick()
+    await nextTick()
 
     expect(queryBody('[data-testid="command-modal-content"]')).not.toBeNull()
     const content = queryBody('[data-testid="command-modal-content"]')?.textContent ?? ''
@@ -168,8 +140,44 @@ describe('CommandModal', () => {
     const wrapper = mountComponent({ commandType: 'standup' })
     await nextTick()
     await nextTick()
+    await nextTick()
 
     expect(queryBody('[data-testid="command-modal-error"]')?.textContent).toContain('Network Error')
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_LoadsSavedText_WhenEntryExists', async () => {
+    clientGet.mockResolvedValue({
+      markdown: '### Did you complete?\nYes saved!',
+      date: '2026-04-07',
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    const content = queryBody('[data-testid="command-modal-content"]')?.textContent ?? ''
+    expect(content).toContain('Yes saved!')
+    // Should not have called generate
+    expect(clientPost).not.toHaveBeenCalledWith('/api/standup/generate', expect.anything(), expect.anything())
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_ShowsRegenerate_WhenContentLoaded', async () => {
+    clientGet.mockResolvedValue({
+      markdown: '### Question?\nAnswer.',
+      date: '2026-04-07',
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    expect(queryBody('[data-testid="cmd-regenerate"]')).not.toBeNull()
 
     wrapper.unmount()
   })

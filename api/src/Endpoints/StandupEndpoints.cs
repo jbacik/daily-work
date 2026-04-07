@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Data;
+using DailyWork.Api.Dtos;
+using DailyWork.Api.Entities;
 using DailyWork.Api.Enums;
 using DailyWork.Api.Prompts;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,41 @@ internal static class StandupEndpoints
     public static RouteGroupBuilder MapStandupEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/standup");
+
+        group.MapGet("/", async (AppDbContext db, string? date) =>
+        {
+            if (date is null)
+                return Results.BadRequest("date query parameter is required.");
+
+            var parsedDate = DateOnly.Parse(date, CultureInfo.InvariantCulture);
+            var entry = await db.StandupEntries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Date == parsedDate);
+
+            if (entry is null)
+                return Results.NotFound();
+
+            return Results.Ok(new { entry.Markdown, Date = entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
+        });
+
+        group.MapPost("/", async (AppDbContext db, SaveStandupDto dto) =>
+        {
+            var date = DateOnly.Parse(dto.Date, CultureInfo.InvariantCulture);
+            var entry = await db.StandupEntries.FirstOrDefaultAsync(s => s.Date == date);
+
+            if (entry is not null)
+            {
+                entry.Markdown = dto.Markdown;
+            }
+            else
+            {
+                entry = new StandupEntry { Date = date, Markdown = dto.Markdown };
+                db.StandupEntries.Add(entry);
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { entry.Markdown, Date = entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
+        });
 
         group.MapPost("/generate", async (
             AppDbContext db,

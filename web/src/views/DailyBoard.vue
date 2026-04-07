@@ -39,11 +39,6 @@ function handleCommand(type: CommandType) {
   activeCommand.value = type
 }
 
-function handleSave(_content: string) {
-  // TODO: POST to API in a future PR
-}
-
-
 const currentDayLabel = computed((): string => {
   const day = dailyTasks.currentDay
   return day >= 0 && day < 5 ? DAYS[day]! : 'N/A'
@@ -131,7 +126,6 @@ onMounted(() => {
         :title="modalTitle"
         :command-type="activeCommand"
         :week-of="dailyTasks.weekOf"
-        @save="handleSave"
         @close="activeCommand = null"
       />
 
