@@ -31,7 +31,9 @@ namespace DailyWork.Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ScratchPads_IsActive",
                 table: "ScratchPads",
-                column: "IsActive");
+                column: "IsActive",
+                unique: true,
+                filter: "\"IsActive\" = TRUE");
         }
 
         /// <inheritdoc />
