@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import client from '@/api/client'
 
 const { isOpen } = defineProps<{
@@ -31,7 +32,7 @@ function defaultFileName(): string {
   return `${y}-${m}-${d}_calendar.json`
 }
 
-const renderedHtml = computed(() => marked(markdown.value))
+const renderedHtml = computed(() => DOMPurify.sanitize(marked(markdown.value) as string))
 
 function startDots() {
   dotIndex.value = 0
@@ -65,11 +66,15 @@ async function handleSubmit() {
   }
 }
 
-function handleCopy() {
+async function handleCopy() {
   const text = resultRef.value?.innerText ?? markdown.value
-  navigator.clipboard.writeText(text)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 1500)
+  try {
+    await navigator.clipboard.writeText(text)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 1500)
+  } catch {
+    // clipboard write failed — do not show success feedback
+  }
 }
 
 function reset() {
