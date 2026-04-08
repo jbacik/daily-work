@@ -72,7 +72,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="max-w-screen-2xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
