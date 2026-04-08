@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useWorkItemsStore } from '@/stores/workItems'
 import { useReadWatchStore } from '@/stores/readWatch'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { DAYS } from '@/utils/week'
+import { DAYS, getToday, getWeekStart } from '@/utils/week'
 import type { CommandType } from '@/types'
 import BigThing from '@/components/BigThing.vue'
 import DailyTasks from '@/components/DailyTasks.vue'
@@ -61,9 +61,19 @@ function formatTime(date: Date): string {
   })
 }
 
+function fetchReadWatch() {
+  if (view.value === 'weekly') {
+    readWatch.fetch({ weekOf: getWeekStart() })
+  } else {
+    readWatch.fetch({ date: getToday() })
+  }
+}
+
+watch(view, () => fetchReadWatch())
+
 onMounted(() => {
   workItems.fetch()
-  readWatch.fetch()
+  fetchReadWatch()
   dailyTasks.fetch()
   scratchPad.fetch()
 })

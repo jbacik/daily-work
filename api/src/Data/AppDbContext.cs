@@ -22,6 +22,8 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
         modelBuilder.Entity<ReadWatchItem>(e =>
         {
             e.HasIndex(r => r.Date);
+            e.HasIndex(r => r.IsActive);
+            e.HasIndex(r => r.WeekConsumed);
         });
 
         modelBuilder.Entity<UpdateComm>(e =>

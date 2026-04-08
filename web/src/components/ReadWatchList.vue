@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { useReadWatchStore } from '@/stores/readWatch'
+import type { ReadWatchItem } from '@/types'
 import ReadingItemRow from './ReadingItemRow.vue'
+import LearningCompleteModal from './LearningCompleteModal.vue'
+import { getWeekStart } from '@/utils/week'
 
 const { defaultShowAll = false } = defineProps<{
   defaultShowAll?: boolean
@@ -9,11 +12,16 @@ const { defaultShowAll = false } = defineProps<{
 
 const store = useReadWatchStore()
 
-const newTitle = ref('')
-const newType = ref<'read' | 'watch' | 'learn'>('read')
+const newText = ref('')
+const newType = ref<'Read' | 'Watch' | 'Learn'>('Read')
 const isAdding = ref(false)
 const showAll = ref(defaultShowAll)
 const inputRef = ref<HTMLInputElement | null>(null)
+
+// Modal state
+const modalItem = ref<ReadWatchItem | null>(null)
+const modalMode = ref<'consume' | 'review'>('consume')
+const modalOpen = ref(false)
 
 function startAdding() {
   isAdding.value = true
@@ -21,25 +29,52 @@ function startAdding() {
 }
 
 function cancelAdd() {
-  newTitle.value = ''
+  newText.value = ''
   isAdding.value = false
 }
 
 async function handleAddItem() {
-  var title = newTitle.value.trim()
-  if (!title) return
-  await store.create(title, '', newType.value)
-  newTitle.value = ''
+  var text = newText.value.trim()
+  if (!text) return
+  await store.create(text, newType.value)
+  newText.value = ''
   isAdding.value = false
 }
 
-async function handleToggle(id: number) {
+function handleConsume(id: number) {
   var item = store.items.find((i) => i.id === id)
-  if (item) await store.update(id, { isDone: !item.isDone })
+  if (!item) return
+  modalItem.value = item
+  modalMode.value = 'consume'
+  modalOpen.value = true
 }
 
-function handleToggleActive(id: number) {
-  store.toggleActive(id)
+function handleReview(id: number) {
+  var item = store.items.find((i) => i.id === id)
+  if (!item) return
+  modalItem.value = item
+  modalMode.value = 'review'
+  modalOpen.value = true
+}
+
+async function handleModalSubmit(data: { worthSharing: boolean; notes: string }) {
+  if (!modalItem.value) return
+  await store.consume(modalItem.value.id, {
+    worthSharing: data.worthSharing,
+    notes: data.notes,
+    weekOf: getWeekStart(),
+  })
+  modalOpen.value = false
+  modalItem.value = null
+}
+
+function handleModalClose() {
+  modalOpen.value = false
+  modalItem.value = null
+}
+
+async function handleToggleActive(id: number) {
+  await store.toggleActive(id)
 }
 
 async function handleDelete(id: number) {
@@ -59,7 +94,7 @@ async function handleDelete(id: number) {
         <div class="flex items-center gap-2">
           <span class="text-accent">&gt;&gt;&gt;</span>
           <span class="text-muted-foreground text-xs uppercase tracking-wider">
-            Active Queue ({{ store.activeItems.length }}/5)
+            Active Queue ({{ store.activeItems.length }})
           </span>
         </div>
         <button
@@ -78,9 +113,9 @@ async function handleDelete(id: number) {
           v-for="item in store.activeItems"
           :key="item.id"
           :item="item"
-          :show-toggle="true"
-          @toggle="handleToggle"
+          @consume="handleConsume"
           @toggle-active="handleToggleActive"
+          @review="handleReview"
           @delete="handleDelete"
         />
       </div>
@@ -91,16 +126,16 @@ async function handleDelete(id: number) {
           v-model="newType"
           class="bg-secondary text-secondary-foreground text-xs px-1 py-0.5 border border-border"
         >
-          <option value="read">READ</option>
-          <option value="watch">WATCH</option>
-          <option value="learn">LEARN</option>
+          <option value="Read">READ</option>
+          <option value="Watch">WATCH</option>
+          <option value="Learn">LEARN</option>
         </select>
         <input
           ref="inputRef"
-          v-model="newTitle"
+          v-model="newText"
           type="text"
           class="flex-1 bg-transparent border-none outline-none text-foreground text-sm"
-          placeholder="Article, video, or skill..."
+          placeholder="Article title, URL, or both..."
           @keydown.enter="handleAddItem"
           @keydown.escape="cancelAdd"
         />
@@ -123,9 +158,9 @@ async function handleDelete(id: number) {
               v-for="item in store.backlogItems"
               :key="item.id"
               :item="item"
-              :show-toggle="true"
-              @toggle="handleToggle"
+              @consume="handleConsume"
               @toggle-active="handleToggleActive"
+              @review="handleReview"
               @delete="handleDelete"
             />
           </div>
@@ -140,14 +175,22 @@ async function handleDelete(id: number) {
               v-for="item in store.completedItems"
               :key="item.id"
               :item="item"
-              :show-toggle="false"
-              @toggle="handleToggle"
+              @consume="handleConsume"
               @toggle-active="handleToggleActive"
+              @review="handleReview"
               @delete="handleDelete"
             />
           </div>
         </div>
       </template>
     </div>
+
+    <LearningCompleteModal
+      :is-open="modalOpen"
+      :item="modalItem"
+      :mode="modalMode"
+      @submit="handleModalSubmit"
+      @close="handleModalClose"
+    />
   </div>
 </template>
