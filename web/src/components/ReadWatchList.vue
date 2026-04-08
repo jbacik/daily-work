@@ -62,7 +62,7 @@ async function handleModalSubmit(data: { worthSharing: boolean; notes: string })
   await store.consume(modalItem.value.id, {
     worthSharing: data.worthSharing,
     notes: data.notes,
-    weekOf: getWeekStart(),
+    weekOf: modalItem.value.weekConsumed ?? getWeekStart(),
   })
   modalOpen.value = false
   modalItem.value = null

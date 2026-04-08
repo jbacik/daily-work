@@ -283,4 +283,78 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
+    {
+        var testDate = "2019-11-01";
+
+        // Arrange — create 5 items
+        var createdIds = new List<int>();
+        for (var i = 0; i < 5; i++)
+        {
+            var resp = await _client.PostAsJsonAsync("/api/read-watch", new
+            {
+                Text = $"limit-test-item-{i}",
+                Type = "Read",
+                Date = testDate
+            });
+            Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+            var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+            createdIds.Add(item!.Id);
+        }
+
+        // Backlog one of them — active count drops to 4
+        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
+
+        // Act — add a 6th item; active count is 4 so it should succeed
+        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "limit-test-sixth-item",
+            Type = "Read",
+            Date = testDate
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, sixthResp.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutConsumeReadWatch_PreservesWeekConsumed_WhenReconsumed()
+    {
+        var originalWeekOf = "2019-10-07";
+        var newWeekOf = "2019-10-14";
+
+        // Arrange — create and consume an item in week A
+        var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "preserve-week-consumed-test",
+            Type = "Read",
+            Date = "2019-10-09"
+        });
+        var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+
+        await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}/consume", new
+        {
+            WorthSharing = true,
+            Notes = "Original notes",
+            WeekOf = originalWeekOf
+        });
+
+        // Act — consume again with a different week (simulating a review save)
+        var reviewResp = await _client.PutAsJsonAsync($"/api/read-watch/{created.Id}/consume", new
+        {
+            WorthSharing = false,
+            Notes = "Updated notes",
+            WeekOf = newWeekOf
+        });
+
+        // Assert — WeekConsumed must still reflect the original week
+        reviewResp.EnsureSuccessStatusCode();
+        var reviewed = await reviewResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+        Assert.NotNull(reviewed);
+        Assert.Equal(originalWeekOf, reviewed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal("Updated notes", reviewed.Notes);
+        Assert.False(reviewed.WorthSharing);
+    }
 }

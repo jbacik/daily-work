@@ -40,7 +40,7 @@ internal static partial class ReadWatchEndpoints
 		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateReadWatchItemDto dto) =>
 		{
 			var d = dto.Date ?? dateTime.UtcToday;
-			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d);
+			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d && r.IsActive && !r.IsDone);
 			if (count >= 5)
 				return Results.Problem("Maximum of 5 read/watch items per day.", statusCode: 400);
 
@@ -86,7 +86,8 @@ internal static partial class ReadWatchEndpoints
 			item.IsActive = false;
 			item.WorthSharing = dto.WorthSharing;
 			item.Notes = dto.Notes;
-			item.WeekConsumed = dto.WeekOf;
+			if (item.WeekConsumed is null)
+				item.WeekConsumed = dto.WeekOf;
 
 			await db.SaveChangesAsync();
 			return Results.Ok(item);

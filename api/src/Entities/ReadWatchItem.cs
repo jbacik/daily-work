@@ -7,7 +7,7 @@ internal class ReadWatchItem
     public int Id { get; set; }
     public required string Title { get; set; }
     public required string Url { get; set; }
-    public ReadWatchType? Type { get; set; }
+    public ReadWatchType Type { get; set; } = ReadWatchType.Read;
     public bool IsDone { get; set; }
     public bool IsActive { get; set; } = true;
     public bool? WorthSharing { get; set; }

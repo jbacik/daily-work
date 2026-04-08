@@ -1,4 +1,4 @@
-import { mount, VueWrapper } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import LearningCompleteModal from './LearningCompleteModal.vue'
 import type { ReadWatchItem } from '@/types'
