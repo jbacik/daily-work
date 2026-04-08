@@ -140,7 +140,7 @@ describe('DailyTasksCompact', () => {
     expect(titles[4]!.classes().join(' ')).toContain('muted-foreground/60')
   })
 
-  it('DailyTasksCompact_4thAnd5thTasks_StillGetLineThrough_WhenDone', async () => {
+  it('DailyTasksCompact_CompletedTasksAtPosition4And5_DisplayLineThrough', async () => {
     const wrapper = mountComponent()
     mockItems.value = Array.from({ length: 5 }, (_, i) =>
       createWorkItem({ id: i + 1, date: TODAY_DATE, title: `Task ${i + 1}`, isDone: true })
