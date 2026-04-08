@@ -1,44 +1,45 @@
 <script setup lang="ts">
 import type { ReadWatchItem } from '@/types'
 
-const { item, showToggle = false } = defineProps<{
+const { item, showActions = true } = defineProps<{
   item: ReadWatchItem
-  showToggle?: boolean
+  showActions?: boolean
 }>()
 
 const emit = defineEmits<{
-  toggle: [id: number]
+  consume: [id: number]
   'toggle-active': [id: number]
+  review: [id: number]
   delete: [id: number]
 }>()
 
-const TYPE_STYLES = {
-  read: 'text-red-400',
-  watch: 'text-blue-400',
-  learn: 'text-green-400',
-} as const
-
-const TYPE_LABELS = {
-  read: 'READ',
-  watch: 'WATCH',
-  learn: 'LEARN',
+const TYPE_EMOJI = {
+  Read: '📔',
+  Watch: '📺',
+  Learn: '🎓',
 } as const
 </script>
 
 <template>
   <div class="flex items-start gap-2 text-sm group py-1">
-    <button class="flex-shrink-0" @click="emit('toggle', item.id)">
-      <span v-if="item.isDone" class="text-primary">[x]</span>
-      <span v-else class="text-muted-foreground">[ ]</span>
+    <button
+      v-if="!item.isDone && showActions"
+      data-testid="consume-btn"
+      class="flex-shrink-0"
+      @click="emit('consume', item.id)"
+    >
+      <span class="text-muted-foreground">[ ]</span>
     </button>
-    <span :class="['text-xs font-medium shrink-0', TYPE_STYLES[item.type || 'read']]">
-      {{ TYPE_LABELS[item.type || 'read'] }}
+    <span v-if="item.isDone" class="flex-shrink-0 text-primary">[x]</span>
+    <span data-testid="type-emoji" class="shrink-0">
+      {{ TYPE_EMOJI[item.type] || '📔' }}
     </span>
     <a
       v-if="item.url"
       :href="item.url"
       target="_blank"
       rel="noopener"
+      data-testid="item-link"
       :class="[
         'flex-1 break-words hover:underline',
         item.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
@@ -48,6 +49,7 @@ const TYPE_LABELS = {
     </a>
     <span
       v-else
+      data-testid="item-text"
       :class="[
         'flex-1 break-words',
         item.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
@@ -56,13 +58,24 @@ const TYPE_LABELS = {
       {{ item.title }}
     </span>
     <button
-      v-if="showToggle && !item.isDone"
+      v-if="item.isDone && showActions"
+      data-testid="review-btn"
+      class="text-muted-foreground hover:text-primary text-xs shrink-0"
+      @click="emit('review', item.id)"
+    >
+      [review]
+    </button>
+    <button
+      v-if="!item.isDone && showActions"
+      data-testid="toggle-active-btn"
       class="text-muted-foreground hover:text-primary text-xs shrink-0"
       @click="emit('toggle-active', item.id)"
     >
-      [{{ item.isActive ? '-' : '+' }}]
+      [{{ item.isActive ? 'backlog' : 'activate' }}]
     </button>
     <button
+      v-if="showActions"
+      data-testid="delete-btn"
       class="opacity-0 group-hover:opacity-100 text-destructive text-xs shrink-0"
       @click="emit('delete', item.id)"
     >

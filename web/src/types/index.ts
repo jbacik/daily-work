@@ -13,8 +13,11 @@ export interface ReadWatchItem {
   id: number
   title: string
   url: string
-  type: 'read' | 'watch' | 'learn'
+  type: 'Read' | 'Watch' | 'Learn'
   isDone: boolean
-  isActive?: boolean
+  isActive: boolean
+  worthSharing: boolean | null
+  notes: string | null
+  weekConsumed: string | null
   date: string
 }
