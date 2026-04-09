@@ -99,4 +99,20 @@ describe('SlashCommandMenu', () => {
 
     wrapper.unmount()
   })
+
+  it('SlashCommandMenu_EmitsCommand_AndCloses_WhenEvaluateMyWeekClicked', async () => {
+    const wrapper = mountComponent()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }))
+    await nextTick()
+    expect(isPanelOpen(wrapper)).toBe(true)
+
+    await wrapper.find('[data-testid="cmd-evaluate-my-week"]').trigger('click')
+
+    expect(wrapper.emitted('command')).toBeTruthy()
+    expect(wrapper.emitted('command')![0]).toEqual(['evaluate-my-week'])
+    expect(isPanelOpen(wrapper)).toBe(false)
+
+    wrapper.unmount()
+  })
 })

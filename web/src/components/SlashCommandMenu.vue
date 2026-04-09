@@ -54,7 +54,7 @@ onUnmounted(() => {
   <div ref="panelRef">
     <div
       class="overflow-hidden transition-all duration-200 ease-out"
-      :class="isOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'"
+      :class="isOpen ? 'max-h-56 opacity-100' : 'max-h-0 opacity-0'"
     >
       <div class="border border-border p-4 bg-card mt-1 mb-4" data-testid="slash-menu-panel">
         <div class="text-xs text-muted-foreground mb-3">
@@ -78,6 +78,15 @@ onUnmounted(() => {
           >
             <span class="text-accent">/weekly</span>
             <span class="text-muted-foreground"> - generate your weekly lattice update</span>
+          </button>
+
+          <button
+            data-testid="cmd-evaluate-my-week"
+            class="w-full text-left px-2 py-1 hover:bg-secondary/50 transition-colors"
+            @click="handleCommandClick('evaluate-my-week')"
+          >
+            <span class="text-accent">/evaluate-my-week</span>
+            <span class="text-muted-foreground"> - analyze your calendar week with AI</span>
           </button>
         </div>
       </div>

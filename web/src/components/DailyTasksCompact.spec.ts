@@ -149,6 +149,23 @@ describe('DailyTasksCompact', () => {
     expect(titles[4]!.classes().join(' ')).toContain('muted-foreground/60')
   })
 
+  it('DailyTasksCompact_CompletedTasksAtPosition4And5_DisplayLineThrough', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = Array.from({ length: 5 }, (_, i) =>
+      createWorkItem({ id: i + 1, date: TODAY_DATE, title: `Task ${i + 1}`, isDone: true })
+    )
+    await nextTick()
+
+    const titles = wrapper.findAll('[data-testid="task-title"]')
+    // All 5 done tasks should have line-through regardless of their index
+    for (let i = 0; i < 5; i++) {
+      expect(titles[i]!.classes()).toContain('line-through')
+    }
+    // The bottom 2 should still have the muted/60 color
+    expect(titles[3]!.classes().join(' ')).toContain('muted-foreground/60')
+    expect(titles[4]!.classes().join(' ')).toContain('muted-foreground/60')
+  })
+
   it('DailyTasksCompact_AddButton_HiddenWhenTodayHas5Tasks', async () => {
     const wrapper = mountComponent()
     mockItems.value = Array.from({ length: 5 }, (_, i) =>

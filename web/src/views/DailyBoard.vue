@@ -15,6 +15,7 @@ import ScratchPad from '@/components/ScratchPad.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
+import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
 
 type ViewMode = 'daily' | 'weekly'
 
@@ -81,7 +82,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-background">
-    <div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="max-w-screen-2xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
@@ -132,10 +133,15 @@ onMounted(() => {
       <BigThing />
 
       <CommandModal
-        :is-open="activeCommand !== null"
+        :is-open="activeCommand !== null && activeCommand !== 'evaluate-my-week'"
         :title="modalTitle"
         :command-type="activeCommand"
         :week-of="dailyTasks.weekOf"
+        @close="activeCommand = null"
+      />
+
+      <EvaluateWeekModal
+        :is-open="activeCommand === 'evaluate-my-week'"
         @close="activeCommand = null"
       />
 
