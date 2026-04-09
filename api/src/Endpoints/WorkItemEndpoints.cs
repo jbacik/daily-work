@@ -20,7 +20,9 @@ internal static class WorkItemEndpoints
 			var items = await db.WorkItems
 				.AsNoTracking()
 				.Where(w => w.WeekOf == weekOf)
-				.OrderBy(w => w.CreatedAt)
+				.OrderBy(w => w.Date)
+				.ThenBy(w => w.SortOrder)
+				.ThenBy(w => w.CreatedAt)
 				.ToListAsync();
 
 			return Results.Ok(items);
@@ -35,11 +37,15 @@ internal static class WorkItemEndpoints
 			var date = dto.Date ?? dateTime.UtcToday;
 			var weekOf = ComputeWeekOf(date);
 
+			var sortOrder = 0;
 			if (category == WorkItemCategory.SmallThing)
 			{
-				var count = await db.WorkItems.CountAsync(w => w.Date == date && w.Category == WorkItemCategory.SmallThing);
-				if (count >= 5)
+				var existing = await db.WorkItems
+					.Where(w => w.Date == date && w.Category == WorkItemCategory.SmallThing)
+					.ToListAsync();
+				if (existing.Count >= 5)
 					return Results.Problem("Maximum 5 tasks per day.", statusCode: 422);
+				sortOrder = existing.Count == 0 ? 0 : existing.Max(w => w.SortOrder) + 1;
 			}
 
 			var item = new WorkItem
@@ -48,6 +54,7 @@ internal static class WorkItemEndpoints
 				Category = category,
 				Date = date,
 				WeekOf = weekOf,
+				SortOrder = sortOrder,
 			};
 			db.WorkItems.Add(item);
 			await db.SaveChangesAsync();
@@ -107,6 +114,48 @@ internal static class WorkItemEndpoints
 			}
 
 			item.Category = WorkItemCategory.SmallThing;
+			await db.SaveChangesAsync();
+			return Results.Ok(item);
+		});
+
+		group.MapPut("/{id}/move-up", async (AppDbContext db, int id) =>
+		{
+			var item = await db.WorkItems.FindAsync(id);
+			if (item is null)
+				return Results.NotFound();
+
+			var previous = await db.WorkItems
+				.Where(w => w.Date == item.Date
+					&& w.Category == item.Category
+					&& w.SortOrder < item.SortOrder)
+				.OrderByDescending(w => w.SortOrder)
+				.FirstOrDefaultAsync();
+
+			if (previous is null)
+				return Results.Ok(item);
+
+			(item.SortOrder, previous.SortOrder) = (previous.SortOrder, item.SortOrder);
+			await db.SaveChangesAsync();
+			return Results.Ok(item);
+		});
+
+		group.MapPut("/{id}/move-down", async (AppDbContext db, int id) =>
+		{
+			var item = await db.WorkItems.FindAsync(id);
+			if (item is null)
+				return Results.NotFound();
+
+			var next = await db.WorkItems
+				.Where(w => w.Date == item.Date
+					&& w.Category == item.Category
+					&& w.SortOrder > item.SortOrder)
+				.OrderBy(w => w.SortOrder)
+				.FirstOrDefaultAsync();
+
+			if (next is null)
+				return Results.Ok(item);
+
+			(item.SortOrder, next.SortOrder) = (next.SortOrder, item.SortOrder);
 			await db.SaveChangesAsync();
 			return Results.Ok(item);
 		});

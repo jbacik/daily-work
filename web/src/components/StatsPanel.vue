@@ -7,12 +7,20 @@ const tasks = useDailyTasksStore()
 const readWatch = useReadWatchStore()
 
 const stats = computed(() => {
-  var totalTasks = tasks.items.length
-  var completedTasks = tasks.items.filter((t) => t.isDone).length
+  const bigItems = tasks.items.filter((t) => t.category === 'BigThing')
+  const smallItems = tasks.items.filter((t) => t.category === 'SmallThing')
+  const totalBig = bigItems.length
+  const completedBig = bigItems.filter((t) => t.isDone).length
+  const totalSmall = smallItems.length
+  const completedSmall = smallItems.filter((t) => t.isDone).length
   return {
-    totalTasks,
-    completedTasks,
-    completionRate: totalTasks > 0 ? `${Math.round((completedTasks / totalTasks) * 100)}%` : '—',
+    totalBig,
+    completedBig,
+    bigSummary: totalBig > 0 ? `${completedBig}/${totalBig}` : '—',
+    totalSmall,
+    completedSmall,
+    smallSummary: totalSmall > 0 ? `${completedSmall}/${totalSmall}` : '—',
+    completionRate: totalSmall > 0 ? `${Math.round((completedSmall / totalSmall) * 100)}%` : '—',
     readingQueue: readWatch.activeItems.length,
     itemsLearned: readWatch.completedItems.length,
   }
@@ -28,16 +36,19 @@ const stats = computed(() => {
 
     <div class="space-y-2 text-sm">
       <div class="flex justify-between">
-        <span class="text-muted-foreground">Tasks this week:</span>
-        <span class="text-foreground">{{ stats.totalTasks }}</span>
+        <span class="text-muted-foreground">BIG (weekly):</span>
+        <span
+          data-testid="big-summary"
+          :class="stats.totalBig > 0 && stats.completedBig === stats.totalBig ? 'text-primary' : 'text-foreground'"
+        >{{ stats.bigSummary }}</span>
       </div>
       <div class="flex justify-between">
-        <span class="text-muted-foreground">Tasks completed:</span>
-        <span class="text-primary">{{ stats.completedTasks }}</span>
+        <span class="text-muted-foreground">SMALL (daily):</span>
+        <span data-testid="small-summary" class="text-foreground">{{ stats.smallSummary }}</span>
       </div>
       <div class="flex justify-between">
-        <span class="text-muted-foreground">Completion rate:</span>
-        <span class="text-accent">{{ stats.completionRate }}</span>
+        <span class="text-muted-foreground">Daily completion:</span>
+        <span data-testid="completion-rate" class="text-accent">{{ stats.completionRate }}</span>
       </div>
       <div class="border-t border-border my-2" />
       <div class="flex justify-between">
