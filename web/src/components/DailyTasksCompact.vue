@@ -189,7 +189,7 @@ function cancelEdit() {
               v-else
               :class="[
                 'flex-1 break-words',
-                taskIndex === 0 && !task.isDone ? 'uppercase text-accent font-bold' : '',
+                taskIndex === 0 ? 'uppercase text-accent font-bold' : '',
                 taskIndex >= 3 ? 'text-muted-foreground/60' : task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
                 isEditable(label) ? 'cursor-text' : '',
               ]"

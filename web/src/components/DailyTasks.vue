@@ -90,7 +90,7 @@ async function deleteTask(id: number) {
             <span
               :class="[
                 'flex-1 break-words text-xs',
-                taskIndex === 0 && !task.isDone ? 'uppercase text-accent font-bold' : '',
+                taskIndex === 0 ? 'uppercase text-accent font-bold' : '',
                 task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
               ]"
             >

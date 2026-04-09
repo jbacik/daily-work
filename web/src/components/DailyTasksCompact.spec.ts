@@ -327,7 +327,7 @@ describe('DailyTasksCompact', () => {
     expect(demoted!.text()).toBe('Demoted Mixed Case')
   })
 
-  it('DailyTasksCompact_DoesNotRenderUppercaseClass_WhenFirstTaskDone', async () => {
+  it('DailyTasksCompact_RendersFirstTaskWithUppercaseClass_WhenDone', async () => {
     const wrapper = mountComponent()
     mockItems.value = [
       createWorkItem({ id: 1, date: TODAY_DATE, title: 'Completed top', sortOrder: 0, isDone: true }),
@@ -336,7 +336,7 @@ describe('DailyTasksCompact', () => {
     await nextTick()
 
     const titles = wrapper.findAll('[data-testid="task-title"]')
-    expect(titles[0]!.classes()).not.toContain('uppercase')
+    expect(titles[0]!.classes()).toContain('uppercase')
   })
 
   it('DailyTasksCompact_CallsMoveUp_WhenUpArrowClicked', async () => {
