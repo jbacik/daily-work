@@ -181,4 +181,37 @@ describe('CommandModal', () => {
 
     wrapper.unmount()
   })
+
+  it('CommandModal_SavesCleanMarkdown_WithoutCopyButtonArtifacts', async () => {
+    clientPost.mockResolvedValue({
+      markdown: '### Did you complete your One Thing yesterday?\nCrushed it.\n\n### What is your One Thing today?\nInsights work.',
+    })
+    clientPost.mockResolvedValueOnce({
+      markdown: '### Did you complete your One Thing yesterday?\nCrushed it.\n\n### What is your One Thing today?\nInsights work.',
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    // Reset to capture the save call
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+
+    const saveBtn = queryBody('[data-testid="cmd-save"]') as HTMLElement
+    saveBtn.click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall).toBeTruthy()
+    const savedMarkdown = saveCall![1].markdown as string
+    // Should be clean markdown, not DOM innerText with [cp] button artifacts
+    expect(savedMarkdown).not.toContain('[cp]')
+    expect(savedMarkdown).toContain('### Did you complete your One Thing yesterday?')
+    expect(savedMarkdown).toContain('### What is your One Thing today?')
+    expect(savedMarkdown).toContain('Crushed it')
+    expect(savedMarkdown).toContain('Insights work')
+
+    wrapper.unmount()
+  })
 })

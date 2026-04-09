@@ -44,7 +44,7 @@ function todayString(): string {
 }
 
 async function handleSave() {
-  const markdown = getContent().trim()
+  const markdown = sectionsToMarkdown().trim()
   if (!markdown || saveState.value === 'saving') return
 
   saveState.value = 'saving'
