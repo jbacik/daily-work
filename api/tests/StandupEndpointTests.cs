@@ -129,4 +129,34 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var result = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.Contains("Second version", result.GetProperty("markdown").GetString()!);
     }
+
+    [Fact]
+    public async Task GetStandup_ReturnsEntryForSpecificDate_WhenMultipleDatesExist()
+    {
+        // Arrange: save standups for two different dates
+        var olderDate = "2020-03-01";
+        var newerDate = "2020-03-10";
+
+        await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### Old standup\nOld content.",
+            Date = olderDate,
+        });
+
+        await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### New standup\nNew content.",
+            Date = newerDate,
+        });
+
+        // Act: query for the newer date only
+        var response = await _client.GetAsync($"/api/standup?date={newerDate}");
+
+        // Assert: should return today's entry, not the oldest
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var markdown = result.GetProperty("markdown").GetString()!;
+        Assert.Contains("New content", markdown);
+        Assert.DoesNotContain("Old content", markdown);
+    }
 }
