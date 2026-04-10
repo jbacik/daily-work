@@ -13,7 +13,7 @@ const { defaultShowAll = false } = defineProps<{
 const store = useReadWatchStore()
 
 const newText = ref('')
-const newType = ref<'Read' | 'Watch' | 'Learn'>('Read')
+const newType = ref<'Read' | 'Watch' | 'Learn' | 'Experiment'>('Read')
 const isAdding = ref(false)
 const showAll = ref(defaultShowAll)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -129,6 +129,7 @@ async function handleDelete(id: number) {
           <option value="Read">READ</option>
           <option value="Watch">WATCH</option>
           <option value="Learn">LEARN</option>
+          <option value="Experiment">EXPERIMENT</option>
         </select>
         <input
           ref="inputRef"

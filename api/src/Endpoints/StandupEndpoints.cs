@@ -114,9 +114,26 @@ internal static class StandupEndpoints
                 ? StandupPrompts.GetSystemPrompt(DayOfWeek.Monday)
                 : StandupPrompts.GetSystemPrompt(dayOfWeek);
 
+            // On Fridays, fetch consumed learning queue items for the week
+            string? learningQueueJson = null;
+            if (dayOfWeek == DayOfWeek.Friday && !useWeeklyPrompt)
+            {
+                var weekStart = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture);
+                var consumedItems = await db.ReadWatchItems
+                    .AsNoTracking()
+                    .Where(r => r.IsDone && r.WeekConsumed == weekStart
+                        && (r.Type == Enums.ReadWatchType.Experiment || r.WorthSharing == true))
+                    .OrderByDescending(r => r.Type == Enums.ReadWatchType.Experiment)
+                    .ThenByDescending(r => r.WorthSharing)
+                    .ToListAsync();
+
+                if (consumedItems.Count > 0)
+                    learningQueueJson = JsonSerializer.Serialize(consumedItems, JsonOptions);
+            }
+
             var chatHistory = new ChatHistory();
             chatHistory.AddSystemMessage(systemPrompt);
-            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(workItemsJson, today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(workItemsJson, today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), learningQueueJson));
 
             var response = await chatService.GetChatMessageContentAsync(chatHistory);
 

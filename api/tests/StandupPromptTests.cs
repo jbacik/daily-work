@@ -43,7 +43,11 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Friday);
 
-        Assert.Contains("Friday", prompt);
+        Assert.Contains("Did you complete your One Thing yesterday", prompt);
+        Assert.Contains("What's the One Thing you will complete today", prompt);
+        Assert.Contains("experiment, improvement, or lesson", prompt);
+        Assert.Contains("Experiment", prompt);
+        Assert.Contains("worthSharing", prompt);
     }
 
     [Fact]
@@ -65,5 +69,20 @@ public class StandupPromptTests
 
         Assert.Contains("Today's date: 2026-04-07", message);
         Assert.Contains(json, message);
+        Assert.DoesNotContain("Learning queue", message);
+    }
+
+    [Fact]
+    public void BuildUserMessage_IncludesLearningQueue_WhenProvided()
+    {
+        var workJson = """[{"id":1,"title":"Test"}]""";
+        var learningJson = """[{"title":"Cool experiment","type":"Experiment"}]""";
+
+        var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-10", learningJson);
+
+        Assert.Contains("Today's date: 2026-04-10", message);
+        Assert.Contains(workJson, message);
+        Assert.Contains("Learning queue items consumed this week", message);
+        Assert.Contains(learningJson, message);
     }
 }

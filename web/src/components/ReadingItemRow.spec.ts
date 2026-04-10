@@ -41,6 +41,12 @@ describe('ReadingItemRow', () => {
     expect(wrapper.get('[data-testid="type-emoji"]').text()).toContain('🎓')
   })
 
+  it('ReadingItemRow_ShowsEmojiForType_WhenExperiment', () => {
+    const wrapper = mountRow(createMockItem({ type: 'Experiment' }))
+
+    expect(wrapper.get('[data-testid="type-emoji"]').text()).toContain('🧪')
+  })
+
   it('ReadingItemRow_RendersAnchorLink_WhenUrlPresent', () => {
     const wrapper = mountRow(createMockItem({
       title: 'Linked article',

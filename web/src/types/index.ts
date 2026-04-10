@@ -14,7 +14,7 @@ export interface ReadWatchItem {
   id: number
   title: string
   url: string
-  type: 'Read' | 'Watch' | 'Learn'
+  type: 'Read' | 'Watch' | 'Learn' | 'Experiment'
   isDone: boolean
   isActive: boolean
   worthSharing: boolean | null
