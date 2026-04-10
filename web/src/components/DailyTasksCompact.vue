@@ -206,6 +206,7 @@ function cancelEdit() {
                   :disabled="taskIndex === 0"
                   class="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed text-xs"
                   data-testid="task-move-up"
+                  aria-label="Move task up"
                   @click="moveUp(task.id)"
                 >
                   ^
@@ -214,6 +215,7 @@ function cancelEdit() {
                   :disabled="taskIndex === store.getTasksForDay(index).length - 1"
                   class="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed text-xs"
                   data-testid="task-move-down"
+                  aria-label="Move task down"
                   @click="moveDown(task.id)"
                 >
                   v

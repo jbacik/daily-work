@@ -45,7 +45,7 @@ internal static class WorkItemEndpoints
 					.ToListAsync();
 				if (existing.Count >= 5)
 					return Results.Problem("Maximum 5 tasks per day.", statusCode: 422);
-				sortOrder = existing.Count == 0 ? 0 : existing.Max(w => w.SortOrder) + 1;
+				sortOrder = existing.Count == 0 ? 1 : existing.Max(w => w.SortOrder) + 1;
 			}
 
 			var item = new WorkItem
@@ -124,6 +124,9 @@ internal static class WorkItemEndpoints
 			if (item is null)
 				return Results.NotFound();
 
+			if (item.Category == WorkItemCategory.BigThing)
+				return Results.Problem("Cannot reorder a BigThing item.", statusCode: 422);
+
 			var previous = await db.WorkItems
 				.Where(w => w.Date == item.Date
 					&& w.Category == item.Category
@@ -144,6 +147,9 @@ internal static class WorkItemEndpoints
 			var item = await db.WorkItems.FindAsync(id);
 			if (item is null)
 				return Results.NotFound();
+
+			if (item.Category == WorkItemCategory.BigThing)
+				return Results.Problem("Cannot reorder a BigThing item.", statusCode: 422);
 
 			var next = await db.WorkItems
 				.Where(w => w.Date == item.Date

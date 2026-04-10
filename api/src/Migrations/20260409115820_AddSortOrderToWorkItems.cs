@@ -17,19 +17,25 @@ namespace DailyWork.Api.Migrations
                 nullable: false,
                 defaultValue: 0);
 
+            migrationBuilder.Sql(@"
+                WITH ordered AS (
+                    SELECT ""Id"", ""Category"",
+                           ROW_NUMBER() OVER (
+                               PARTITION BY ""Date"", ""Category""
+                               ORDER BY ""Id""
+                           ) AS rn
+                    FROM ""WorkItems""
+                )
+                UPDATE ""WorkItems""
+                SET ""SortOrder"" = CASE WHEN o.""Category"" = 1 THEN 0 ELSE o.rn END
+                FROM ordered o
+                WHERE ""WorkItems"".""Id"" = o.""Id"";
+            ");
+
             migrationBuilder.CreateIndex(
                 name: "IX_WorkItems_Date_Category_SortOrder",
                 table: "WorkItems",
                 columns: new[] { "Date", "Category", "SortOrder" });
-
-            migrationBuilder.Sql(@"
-                UPDATE ""WorkItems"" SET ""SortOrder"" = (
-                    SELECT COUNT(*) FROM ""WorkItems"" w2
-                    WHERE w2.""Date"" = ""WorkItems"".""Date""
-                      AND w2.""Category"" = ""WorkItems"".""Category""
-                      AND w2.""Id"" < ""WorkItems"".""Id""
-                );
-            ");
         }
 
         /// <inheritdoc />

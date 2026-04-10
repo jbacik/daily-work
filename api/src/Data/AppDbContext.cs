@@ -15,7 +15,6 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
     {
         modelBuilder.Entity<WorkItem>(e =>
         {
-            e.HasIndex(w => new { w.Date, w.Category });
             e.HasIndex(w => new { w.Date, w.Category, w.SortOrder });
             e.HasIndex(w => w.WeekOf);
         });
