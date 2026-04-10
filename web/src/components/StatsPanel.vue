@@ -7,20 +7,27 @@ const tasks = useDailyTasksStore()
 const readWatch = useReadWatchStore()
 
 const stats = computed(() => {
-  const bigItems = tasks.items.filter((t) => t.category === 'BigThing')
   const smallItems = tasks.items.filter((t) => t.category === 'SmallThing')
-  const totalBig = bigItems.length
-  const completedBig = bigItems.filter((t) => t.isDone).length
-  const totalSmall = smallItems.length
-  const completedSmall = smallItems.filter((t) => t.isDone).length
+
+  const minSortOrderByDate = new Map<string, number>()
+  for (const item of smallItems) {
+    const current = minSortOrderByDate.get(item.date)
+    if (current === undefined || item.sortOrder < current)
+      minSortOrderByDate.set(item.date, item.sortOrder)
+  }
+
+  const oneThings = smallItems.filter((t) => t.sortOrder === minSortOrderByDate.get(t.date))
+  const smallerThings = smallItems.filter((t) => t.sortOrder !== minSortOrderByDate.get(t.date))
+
+  const totalOneThings = oneThings.length
+  const completedOneThings = oneThings.filter((t) => t.isDone).length
+  const totalSmallerThings = smallerThings.length
+  const completedSmallerThings = smallerThings.filter((t) => t.isDone).length
+
   return {
-    totalBig,
-    completedBig,
-    bigSummary: totalBig > 0 ? `${completedBig}/${totalBig}` : '—',
-    totalSmall,
-    completedSmall,
-    smallSummary: totalSmall > 0 ? `${completedSmall}/${totalSmall}` : '—',
-    completionRate: totalSmall > 0 ? `${Math.round((completedSmall / totalSmall) * 100)}%` : '—',
+    oneThingSummary: totalOneThings > 0 ? `${completedOneThings}/${totalOneThings}` : '—',
+    smallerThingsSummary: totalSmallerThings > 0 ? `${completedSmallerThings}/${totalSmallerThings}` : '—',
+    completionRate: totalOneThings > 0 ? `${Math.round((completedOneThings / totalOneThings) * 100)}%` : '—',
     readingQueue: readWatch.activeItems.length,
     itemsLearned: readWatch.completedItems.length,
   }
@@ -36,18 +43,15 @@ const stats = computed(() => {
 
     <div class="space-y-2 text-sm">
       <div class="flex justify-between">
-        <span class="text-muted-foreground">BIG (weekly):</span>
-        <span
-          data-testid="big-summary"
-          :class="stats.totalBig > 0 && stats.completedBig === stats.totalBig ? 'text-primary' : 'text-foreground'"
-        >{{ stats.bigSummary }}</span>
+        <span class="text-muted-foreground">Daily One Things:</span>
+        <span data-testid="one-thing-summary" class="text-foreground">{{ stats.oneThingSummary }}</span>
       </div>
       <div class="flex justify-between">
-        <span class="text-muted-foreground">SMALL (daily):</span>
-        <span data-testid="small-summary" class="text-foreground">{{ stats.smallSummary }}</span>
+        <span class="text-muted-foreground">Daily Smaller Things:</span>
+        <span data-testid="smaller-things-summary" class="text-foreground">{{ stats.smallerThingsSummary }}</span>
       </div>
       <div class="flex justify-between">
-        <span class="text-muted-foreground">Daily completion:</span>
+        <span class="text-muted-foreground">One Thing rate:</span>
         <span data-testid="completion-rate" class="text-accent">{{ stats.completionRate }}</span>
       </div>
       <div class="border-t border-border my-2" />

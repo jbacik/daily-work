@@ -41,69 +41,87 @@ describe('StatsPanel', () => {
     mockReadWatchCompleted.value = []
   })
 
-  it('StatsPanel_ShowsSeparateBigAndSmallStats_WhenBothPresent', async () => {
-    mockWorkItems.value = [
-      createWorkItem({ category: 'BigThing', isDone: true }),
-      createWorkItem({ category: 'SmallThing', isDone: true }),
-      createWorkItem({ category: 'SmallThing', isDone: false }),
-      createWorkItem({ category: 'SmallThing', isDone: false }),
-    ]
+  it('StatsPanel_ShowsDash_WhenNoSmallItems', async () => {
     const wrapper = mount(StatsPanel)
     await nextTick()
 
-    expect(wrapper.get('[data-testid="big-summary"]').text()).toBe('1/1')
-    expect(wrapper.get('[data-testid="small-summary"]').text()).toBe('1/3')
-  })
-
-  it('StatsPanel_ShowsZeroBigStats_WhenNoBigThing', async () => {
-    mockWorkItems.value = [
-      createWorkItem({ category: 'SmallThing', isDone: true }),
-      createWorkItem({ category: 'SmallThing', isDone: false }),
-    ]
-    const wrapper = mount(StatsPanel)
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="big-summary"]').text()).toBe('—')
-    expect(wrapper.get('[data-testid="small-summary"]').text()).toBe('1/2')
-  })
-
-  it('StatsPanel_ExcludesBigThingFromSmallCompletionRate_WhenMixedItems', async () => {
-    // 1 BigThing done + 1 SmallThing not done = small rate must be 0%, not 50%
-    mockWorkItems.value = [
-      createWorkItem({ category: 'BigThing', isDone: true }),
-      createWorkItem({ category: 'SmallThing', isDone: false }),
-    ]
-    const wrapper = mount(StatsPanel)
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="completion-rate"]').text()).toBe('0%')
-  })
-
-  it('StatsPanel_ShowsZeroSmallStats_WhenOnlyBigThingExists', async () => {
-    mockWorkItems.value = [createWorkItem({ category: 'BigThing', isDone: false })]
-    const wrapper = mount(StatsPanel)
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="big-summary"]').text()).toBe('0/1')
-    expect(wrapper.get('[data-testid="small-summary"]').text()).toBe('—')
+    expect(wrapper.get('[data-testid="one-thing-summary"]').text()).toBe('—')
+    expect(wrapper.get('[data-testid="smaller-things-summary"]').text()).toBe('—')
     expect(wrapper.get('[data-testid="completion-rate"]').text()).toBe('—')
   })
 
-  it('StatsPanel_HighlightsBigSummary_WhenAllBigThingsComplete', async () => {
-    mockWorkItems.value = [createWorkItem({ category: 'BigThing', isDone: true })]
-    const wrapper = mount(StatsPanel)
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="big-summary"]').classes()).toContain('text-primary')
-  })
-
-  it('StatsPanel_DoesNotHighlightBigSummary_WhenIncomplete', async () => {
+  it('StatsPanel_ShowsOneThingSummary_WhenTopTasksExist', async () => {
+    // 2 days, each with a top task; 1 done
     mockWorkItems.value = [
-      createWorkItem({ category: 'BigThing', isDone: false }),
+      createWorkItem({ date: '2026-04-07', sortOrder: 0, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: false }),
     ]
     const wrapper = mount(StatsPanel)
     await nextTick()
 
-    expect(wrapper.get('[data-testid="big-summary"]').classes()).not.toContain('text-primary')
+    expect(wrapper.get('[data-testid="one-thing-summary"]').text()).toBe('1/2')
+  })
+
+  it('StatsPanel_ShowsSmallerThingsSummary_ExcludingTopTask', async () => {
+    // 1 day: top done, 1 smaller done, 1 smaller not done
+    mockWorkItems.value = [
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 1, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 2, isDone: false }),
+    ]
+    const wrapper = mount(StatsPanel)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="one-thing-summary"]').text()).toBe('1/1')
+    expect(wrapper.get('[data-testid="smaller-things-summary"]').text()).toBe('1/2')
+  })
+
+  it('StatsPanel_ExcludesSecondaryTasksFromOneThingCount', async () => {
+    // Only the non-top task is done; One Thing count should not be inflated
+    mockWorkItems.value = [
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: false }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 1, isDone: true }),
+    ]
+    const wrapper = mount(StatsPanel)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="one-thing-summary"]').text()).toBe('0/1')
+  })
+
+  it('StatsPanel_ExcludesTopTaskFromSmallerThingsCount', async () => {
+    // Top task done; should not be counted in Smaller Things
+    mockWorkItems.value = [
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 1, isDone: false }),
+    ]
+    const wrapper = mount(StatsPanel)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="smaller-things-summary"]').text()).toBe('0/1')
+  })
+
+  it('StatsPanel_OneThingRate_ReflectsOnlyTopTasks', async () => {
+    // 2 days: top done on day 1, not done on day 2 — rate is 50% regardless of smaller things
+    mockWorkItems.value = [
+      createWorkItem({ date: '2026-04-07', sortOrder: 0, isDone: true }),
+      createWorkItem({ date: '2026-04-07', sortOrder: 1, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: false }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 1, isDone: true }),
+    ]
+    const wrapper = mount(StatsPanel)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="completion-rate"]').text()).toBe('50%')
+  })
+
+  it('StatsPanel_ShowsDash_ForSmallerThings_WhenEachDayHasOnlyOneTask', async () => {
+    mockWorkItems.value = [
+      createWorkItem({ date: '2026-04-07', sortOrder: 0, isDone: true }),
+      createWorkItem({ date: '2026-04-08', sortOrder: 0, isDone: false }),
+    ]
+    const wrapper = mount(StatsPanel)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="smaller-things-summary"]').text()).toBe('—')
   })
 })

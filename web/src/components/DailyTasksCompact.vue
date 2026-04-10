@@ -190,7 +190,8 @@ function cancelEdit() {
               :class="[
                 'flex-1 break-words',
                 taskIndex === 0 ? 'uppercase text-accent font-bold' : '',
-                taskIndex >= 3 ? 'text-muted-foreground/60' : task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
+                taskIndex >= 3 ? 'text-muted-foreground/60' : task.isDone ? 'text-muted-foreground' : 'text-foreground',
+                task.isDone ? 'line-through' : '',
                 isEditable(label) ? 'cursor-text' : '',
               ]"
               data-testid="task-title"
