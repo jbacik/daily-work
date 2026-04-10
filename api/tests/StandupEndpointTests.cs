@@ -152,7 +152,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Act: query for the newer date only
         var response = await _client.GetAsync($"/api/standup?date={newerDate}");
 
-        // Assert: should return today's entry, not the oldest
+        // Assert: should return the queried date's entry, not the oldest
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var markdown = result.GetProperty("markdown").GetString()!;
