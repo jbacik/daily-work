@@ -17,6 +17,7 @@ const TYPE_EMOJI = {
   Read: '📔',
   Watch: '📺',
   Learn: '🎓',
+  Experiment: '🧪',
 } as const
 </script>
 
