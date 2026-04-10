@@ -79,7 +79,7 @@ async function deleteTask(id: number) {
 
         <div class="space-y-1">
           <div
-            v-for="task in store.getTasksForDay(dayIndex)"
+            v-for="(task, taskIndex) in store.getTasksForDay(dayIndex)"
             :key="task.id"
             class="flex items-start gap-1 text-sm group"
           >
@@ -90,6 +90,7 @@ async function deleteTask(id: number) {
             <span
               :class="[
                 'flex-1 break-words text-xs',
+                taskIndex === 0 ? 'uppercase text-accent font-bold' : '',
                 task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
               ]"
             >

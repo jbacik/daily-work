@@ -8,6 +8,7 @@ internal class WorkItem
     public required string Title { get; set; }
     public WorkItemCategory Category { get; set; } = WorkItemCategory.SmallThing;
     public bool IsDone { get; set; }
+    public int SortOrder { get; set; }
     public DateOnly Date { get; set; }
     public required string WeekOf { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

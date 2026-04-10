@@ -265,10 +265,10 @@ onUnmounted(() => {
             class="min-h-full w-full bg-transparent text-foreground focus:outline-none leading-relaxed"
             data-testid="command-modal-content"
           >
-            <div v-for="(section, i) in sections" :key="i" class="mb-4">
+            <div v-for="(section, i) in sections" :key="i" class="mb-8">
               <div class="flex items-start gap-2 group">
                 <div class="flex-1">
-                  <div class="text-primary font-bold">{{ section.question }}</div>
+                  <div class="text-accent text-lg font-bold">{{ section.question }}</div>
                   <div class="whitespace-pre-wrap mt-1" v-html="renderBold(section.answer)"></div>
                 </div>
                 <button

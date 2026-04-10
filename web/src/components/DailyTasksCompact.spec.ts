@@ -33,6 +33,8 @@ const mockItems = ref<WorkItem[]>([])
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
 const mockRemove = vi.fn()
+const mockMoveUp = vi.fn()
+const mockMoveDown = vi.fn()
 
 vi.mock('@/stores/dailyTasks', () => ({
   useDailyTasksStore: () => ({
@@ -41,12 +43,16 @@ vi.mock('@/stores/dailyTasks', () => ({
     currentDay: 2, // plain number — Pinia auto-unwraps computed refs; return raw value in mock
     getTasksForDay: (day: number) => {
       const date = DATE_MAP[day]
-      return mockItems.value.filter(t => t.category === 'SmallThing' && t.date === date)
+      return mockItems.value
+        .filter(t => t.category === 'SmallThing' && t.date === date)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
     },
     fetch: vi.fn(),
     create: mockCreate,
     update: mockUpdate,
     remove: mockRemove,
+    moveUp: mockMoveUp,
+    moveDown: mockMoveDown,
   }),
 }))
 
@@ -59,6 +65,7 @@ const createWorkItem = (overrides: Partial<WorkItem> = {}): WorkItem => ({
   title: 'Test task',
   category: 'SmallThing',
   isDone: false,
+  sortOrder: 0,
   date: TODAY_DATE,
   weekOf: WEEK_START,
   ...overrides,
@@ -77,6 +84,8 @@ describe('DailyTasksCompact', () => {
     mockCreate.mockReset()
     mockUpdate.mockReset()
     mockRemove.mockReset()
+    mockMoveUp.mockReset()
+    mockMoveDown.mockReset()
   })
 
   it('DailyTasksCompact_RendersAsymmetricGrid_WithTodayWider', () => {
@@ -301,5 +310,116 @@ describe('DailyTasksCompact', () => {
     await input.trigger('keydown', { key: 'Enter', code: 'Enter' })
 
     expect(mockCreate).toHaveBeenCalledWith('New task', 2)
+  })
+
+  it('DailyTasksCompact_RendersFirstTaskWithUppercaseClass_WhenMultipleTasks', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, title: 'mixed Case Top', sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, title: 'lower second', sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const titles = wrapper.findAll('[data-testid="task-title"]')
+    expect(titles[0]!.classes()).toContain('uppercase')
+    expect(titles[0]!.classes()).toContain('text-accent')
+    // Raw text preserved (CSS handles uppercase rendering)
+    expect(titles[0]!.text()).toBe('mixed Case Top')
+    expect(titles[1]!.classes()).not.toContain('uppercase')
+  })
+
+  it('DailyTasksCompact_DoesNotRenderUppercaseClass_WhenTaskDemoted', async () => {
+    const wrapper = mountComponent()
+    // The previously-top task is now sortOrder=1, so a different task is at index 0
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, title: 'New Top', sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, title: 'Demoted Mixed Case', sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const titles = wrapper.findAll('[data-testid="task-title"]')
+    const demoted = titles.find(t => t.text() === 'Demoted Mixed Case')
+    expect(demoted).toBeDefined()
+    expect(demoted!.classes()).not.toContain('uppercase')
+    expect(demoted!.text()).toBe('Demoted Mixed Case')
+  })
+
+  it('DailyTasksCompact_RendersFirstTaskWithUppercaseClass_WhenDone', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, title: 'Completed top', sortOrder: 0, isDone: true }),
+      createWorkItem({ id: 2, date: TODAY_DATE, title: 'Second', sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const titles = wrapper.findAll('[data-testid="task-title"]')
+    expect(titles[0]!.classes()).toContain('uppercase')
+  })
+
+  it('DailyTasksCompact_CallsMoveUp_WhenUpArrowClicked', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const upButtons = wrapper.findAll('[data-testid="task-move-up"]')
+    // Second task's up button (first is disabled)
+    await upButtons[1]!.trigger('click')
+
+    expect(mockMoveUp).toHaveBeenCalledWith(2)
+  })
+
+  it('DailyTasksCompact_CallsMoveDown_WhenDownArrowClicked', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const downButtons = wrapper.findAll('[data-testid="task-move-down"]')
+    await downButtons[0]!.trigger('click')
+
+    expect(mockMoveDown).toHaveBeenCalledWith(1)
+  })
+
+  it('DailyTasksCompact_DisablesUpArrow_WhenFirstTask', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const upButtons = wrapper.findAll('[data-testid="task-move-up"]')
+    expect((upButtons[0]!.element as HTMLButtonElement).disabled).toBe(true)
+    expect((upButtons[1]!.element as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('DailyTasksCompact_DisablesDownArrow_WhenLastTask', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: TODAY_DATE, sortOrder: 0 }),
+      createWorkItem({ id: 2, date: TODAY_DATE, sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    const downButtons = wrapper.findAll('[data-testid="task-move-down"]')
+    expect((downButtons[0]!.element as HTMLButtonElement).disabled).toBe(false)
+    expect((downButtons[1]!.element as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('DailyTasksCompact_DoesNotRenderMoveButtons_ForYesterdayColumn', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, date: YESTERDAY_DATE, sortOrder: 0 }),
+      createWorkItem({ id: 2, date: YESTERDAY_DATE, sortOrder: 1 }),
+    ]
+    await nextTick()
+
+    expect(wrapper.findAll('[data-testid="task-move-up"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="task-move-down"]')).toHaveLength(0)
   })
 })

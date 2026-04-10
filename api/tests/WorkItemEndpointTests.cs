@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Entities;
 using DailyWork.Api.Tests.Fixtures;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
@@ -132,5 +133,124 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(items);
         Assert.DoesNotContain(items, i => i.Id == item1.Id && i.Category.ToString() == "BigThing");
         Assert.Contains(items, i => i.Id == item2.Id && i.Category.ToString() == "BigThing");
+    }
+
+    [Fact]
+    public async Task PostWorkItem_AssignsIncrementingSortOrder_WhenSameDay()
+    {
+        var date = new DateOnly(2020, 1, 17).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "SortOrder A", Category = "SmallThing", Date = date });
+        var r2 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "SortOrder B", Category = "SmallThing", Date = date });
+        var r3 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "SortOrder C", Category = "SmallThing", Date = date });
+
+        var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        var item2 = await r2.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        var item3 = await r3.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+
+        item1.ShouldNotBeNull();
+        item2.ShouldNotBeNull();
+        item3.ShouldNotBeNull();
+        new[] { item1.SortOrder, item2.SortOrder, item3.SortOrder }.ShouldBeInOrder();
+    }
+
+    [Fact]
+    public async Task GetWorkItems_ReturnsItemsSortedBySortOrder_WhenMultipleSameDay()
+    {
+        var date = new DateOnly(2020, 1, 17).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        await _client.PostAsJsonAsync("/api/work-items", new { Title = "Sorted first marker", Category = "SmallThing", Date = date });
+        await _client.PostAsJsonAsync("/api/work-items", new { Title = "Sorted second marker", Category = "SmallThing", Date = date });
+
+        var getResponse = await _client.GetAsync($"/api/work-items?weekOf={TestWeekOf}");
+        var items = await getResponse.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
+        items.ShouldNotBeNull();
+
+        var filtered = items.Where(i => i.Title == "Sorted first marker" || i.Title == "Sorted second marker").ToList();
+        filtered.Count.ShouldBe(2);
+        filtered.Select(i => i.SortOrder).ShouldBeInOrder();
+        filtered[0].Title.ShouldBe("Sorted first marker");
+    }
+
+    [Fact]
+    public async Task MoveUpWorkItem_SwapsWithPrevious_WhenNotFirst()
+    {
+        var date = new DateOnly(2020, 1, 18).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveUp alpha marker", Category = "SmallThing", Date = date });
+        var r2 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveUp beta marker", Category = "SmallThing", Date = date });
+        var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        var item2 = await r2.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        item1.ShouldNotBeNull();
+        item2.ShouldNotBeNull();
+        var expectedSortedIds = new[] { item2.Id, item1.Id };
+
+        var moveResponse = await _client.PutAsync($"/api/work-items/{item2.Id}/move-up", null);
+        moveResponse.EnsureSuccessStatusCode();
+
+        var getResponse = await _client.GetAsync($"/api/work-items?weekOf={TestWeekOf}");
+        var items = await getResponse.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
+        items.ShouldNotBeNull();
+        var actualSortedIds = items.Where(i => i.Id == item1.Id || i.Id == item2.Id).Select(i => i.Id).ToArray();
+        actualSortedIds.ShouldBe(expectedSortedIds);
+    }
+
+    [Fact]
+    public async Task MoveUpWorkItem_NoOp_WhenAlreadyFirst()
+    {
+        var date = new DateOnly(2020, 1, 20).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveUpFirst solo marker", Category = "SmallThing", Date = date });
+        var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        item1.ShouldNotBeNull();
+        var originalSortOrder = item1.SortOrder;
+
+        var moveResponse = await _client.PutAsync($"/api/work-items/{item1.Id}/move-up", null);
+        moveResponse.EnsureSuccessStatusCode();
+        var moved = await moveResponse.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+
+        moved.ShouldNotBeNull();
+        moved.SortOrder.ShouldBe(originalSortOrder);
+    }
+
+    [Fact]
+    public async Task MoveDownWorkItem_SwapsWithNext_WhenNotLast()
+    {
+        var date = new DateOnly(2020, 1, 19).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveDown alpha marker", Category = "SmallThing", Date = date });
+        var r2 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveDown beta marker", Category = "SmallThing", Date = date });
+        var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        var item2 = await r2.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        item1.ShouldNotBeNull();
+        item2.ShouldNotBeNull();
+        var expectedSortedIds = new[] { item2.Id, item1.Id };
+
+        var moveResponse = await _client.PutAsync($"/api/work-items/{item1.Id}/move-down", null);
+        moveResponse.EnsureSuccessStatusCode();
+
+        var getResponse = await _client.GetAsync($"/api/work-items?weekOf={TestWeekOf}");
+        var items = await getResponse.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
+        items.ShouldNotBeNull();
+        var actualSortedIds = items.Where(i => i.Id == item1.Id || i.Id == item2.Id).Select(i => i.Id).ToArray();
+        actualSortedIds.ShouldBe(expectedSortedIds);
+    }
+
+    [Fact]
+    public async Task MoveDownWorkItem_NoOp_WhenAlreadyLast()
+    {
+        var date = new DateOnly(2020, 1, 22).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+
+        var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "MoveDownLast solo marker", Category = "SmallThing", Date = date });
+        var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+        item1.ShouldNotBeNull();
+        var originalSortOrder = item1.SortOrder;
+
+        var moveResponse = await _client.PutAsync($"/api/work-items/{item1.Id}/move-down", null);
+        moveResponse.EnsureSuccessStatusCode();
+        var moved = await moveResponse.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+
+        moved.ShouldNotBeNull();
+        moved.SortOrder.ShouldBe(originalSortOrder);
     }
 }

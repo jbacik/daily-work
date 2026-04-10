@@ -11,7 +11,9 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
 
   function getTasksForDay(day: number) {
     const date = getDateForDayIndex(day, weekOf.value)
-    return items.value.filter(t => t.category === 'SmallThing' && t.date === date)
+    return items.value
+      .filter(t => t.category === 'SmallThing' && t.date === date)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
   }
 
   async function fetch(week?: string) {
@@ -43,5 +45,31 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
     items.value = items.value.filter(t => t.id !== id)
   }
 
-  return { items, weekOf, currentDay, getTasksForDay, fetch, create, update, remove }
+  async function moveUp(id: number) {
+    const item = items.value.find(t => t.id === id)
+    if (!item) return
+    const previous = items.value
+      .filter(t => t.category === item.category && t.date === item.date && t.sortOrder < item.sortOrder)
+      .sort((a, b) => b.sortOrder - a.sortOrder)[0]
+    if (!previous) return
+    await client.put(`/api/work-items/${id}/move-up`)
+    const temp = item.sortOrder
+    item.sortOrder = previous.sortOrder
+    previous.sortOrder = temp
+  }
+
+  async function moveDown(id: number) {
+    const item = items.value.find(t => t.id === id)
+    if (!item) return
+    const next = items.value
+      .filter(t => t.category === item.category && t.date === item.date && t.sortOrder > item.sortOrder)
+      .sort((a, b) => a.sortOrder - b.sortOrder)[0]
+    if (!next) return
+    await client.put(`/api/work-items/${id}/move-down`)
+    const temp = item.sortOrder
+    item.sortOrder = next.sortOrder
+    next.sortOrder = temp
+  }
+
+  return { items, weekOf, currentDay, getTasksForDay, fetch, create, update, remove, moveUp, moveDown }
 })

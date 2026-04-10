@@ -80,6 +80,14 @@ async function deleteTask(id: number) {
   await store.remove(id)
 }
 
+async function moveUp(id: number) {
+  await store.moveUp(id)
+}
+
+async function moveDown(id: number) {
+  await store.moveDown(id)
+}
+
 function startEdit(id: number, currentTitle: string) {
   editingTaskId.value = id
   editingValue.value = currentTitle
@@ -181,9 +189,9 @@ function cancelEdit() {
               v-else
               :class="[
                 'flex-1 break-words',
-                taskIndex >= 3
-                  ? task.isDone ? 'line-through text-muted-foreground/60' : 'text-muted-foreground/60'
-                  : task.isDone ? 'line-through text-muted-foreground' : 'text-foreground',
+                taskIndex === 0 ? 'uppercase text-accent font-bold' : '',
+                taskIndex >= 3 ? 'text-muted-foreground/60' : task.isDone ? 'text-muted-foreground' : 'text-foreground',
+                task.isDone ? 'line-through' : '',
                 isEditable(label) ? 'cursor-text' : '',
               ]"
               data-testid="task-title"
@@ -192,13 +200,35 @@ function cancelEdit() {
               {{ task.title }}
             </span>
 
-            <button
-              class="opacity-0 group-hover:opacity-100 text-destructive text-xs"
-              data-testid="task-delete"
-              @click="deleteTask(task.id)"
-            >
-              x
-            </button>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <template v-if="isEditable(label)">
+                <button
+                  :disabled="taskIndex === 0"
+                  class="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                  data-testid="task-move-up"
+                  aria-label="Move task up"
+                  @click="moveUp(task.id)"
+                >
+                  ^
+                </button>
+                <button
+                  :disabled="taskIndex === store.getTasksForDay(index).length - 1"
+                  class="text-muted-foreground hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                  data-testid="task-move-down"
+                  aria-label="Move task down"
+                  @click="moveDown(task.id)"
+                >
+                  v
+                </button>
+              </template>
+              <button
+                class="text-destructive text-xs"
+                data-testid="task-delete"
+                @click="deleteTask(task.id)"
+              >
+                x
+              </button>
+            </div>
           </div>
 
           <div v-if="store.getTasksForDay(index).length < 5">

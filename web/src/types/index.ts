@@ -3,6 +3,7 @@ export interface WorkItem {
   title: string
   category: 'BigThing' | 'SmallThing'
   isDone: boolean
+  sortOrder: number
   date: string
   weekOf: string
 }

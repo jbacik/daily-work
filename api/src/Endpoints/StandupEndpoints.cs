@@ -81,6 +81,8 @@ internal static class StandupEndpoints
                 .AsNoTracking()
                 .Where(w => w.WeekOf == weekOf)
                 .OrderBy(w => w.Date)
+                .ThenBy(w => w.Category)
+                .ThenBy(w => w.SortOrder)
                 .ThenBy(w => w.CreatedAt)
                 .ToListAsync();
 
