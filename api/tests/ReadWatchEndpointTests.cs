@@ -90,36 +90,41 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetReadWatch_ByDate_ReturnsOnlyActiveNotDone()
+    public async Task GetReadWatch_NoParams_ReturnsAllActiveNotDoneAcrossDates()
     {
-        var testDate = "2019-02-01";
-
-        // Arrange — create an active item and a backlogged item
+        // Arrange — create active items on different dates
         await _client.PostAsJsonAsync("/api/read-watch", new
         {
-            Text = "active-date-filter-test",
+            Text = "active-date-a-test",
             Type = "Read",
-            Date = testDate
+            Date = "2019-02-01"
+        });
+        await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "active-date-b-test",
+            Type = "Read",
+            Date = "2019-02-05"
         });
 
         var backlogResp = await _client.PostAsJsonAsync("/api/read-watch", new
         {
-            Text = "backlog-date-filter-test",
+            Text = "backlog-cross-date-test",
             Type = "Read",
-            Date = testDate
+            Date = "2019-02-01"
         });
         var backlogItem = await backlogResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
         await _client.PutAsJsonAsync($"/api/read-watch/{backlogItem!.Id}", new { IsActive = false });
 
         // Act
-        var response = await _client.GetAsync($"/api/read-watch?date={testDate}");
+        var response = await _client.GetAsync("/api/read-watch");
 
         // Assert
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
         Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "active-date-filter-test");
-        Assert.DoesNotContain(items, i => i.Title == "backlog-date-filter-test");
+        Assert.Contains(items, i => i.Title == "active-date-a-test");
+        Assert.Contains(items, i => i.Title == "active-date-b-test");
+        Assert.DoesNotContain(items, i => i.Title == "backlog-cross-date-test");
     }
 
     [Fact]

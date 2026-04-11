@@ -10,7 +10,7 @@ export const useReadWatchStore = defineStore('readWatch', () => {
   const backlogItems = computed(() => items.value.filter((i) => !i.isActive && !i.isDone))
   const completedItems = computed(() => items.value.filter((i) => i.isDone))
 
-  async function fetch(params?: { date?: string; weekOf?: string }) {
+  async function fetch(params?: { weekOf?: string }) {
     items.value = await client.get('/api/read-watch', { params }) as any
   }
 

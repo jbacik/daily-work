@@ -169,7 +169,7 @@ async function handleDelete(id: number) {
 
         <div v-if="store.completedItems.length > 0" class="mt-4 pt-4 border-t border-border">
           <div class="text-muted-foreground text-xs uppercase tracking-wider mb-2">
-            ─── Completed ({{ store.completedItems.length }}) ───
+            ─── Consumed This Week ({{ store.completedItems.length }}) ───
           </div>
           <div class="space-y-1 opacity-60">
             <ReadingItemRow

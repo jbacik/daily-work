@@ -66,7 +66,7 @@ function fetchReadWatch() {
   if (view.value === 'weekly') {
     readWatch.fetch({ weekOf: getWeekStart() })
   } else {
-    readWatch.fetch({ date: getToday() })
+    readWatch.fetch()
   }
 }
 
