@@ -39,9 +39,12 @@ internal static partial class ReadWatchEndpoints
 		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateReadWatchItemDto dto) =>
 		{
 			var d = dto.Date ?? dateTime.UtcToday;
-			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d && r.IsActive && !r.IsDone);
-			if (count >= 5)
-				return Results.Problem("Maximum of 5 read/watch items per day.", statusCode: 400);
+			if (dto.IsActive != false)
+			{
+				var count = await db.ReadWatchItems.CountAsync(r => r.Date == d && r.IsActive && !r.IsDone);
+				if (count >= 5)
+					return Results.Problem("Maximum of 5 read/watch items per day.", statusCode: 400);
+			}
 
 			var (title, url) = ParseTextForUrl(dto.Text);
 			var type = Enum.TryParse<ReadWatchType>(dto.Type, ignoreCase: true, out var parsed) ? parsed : ReadWatchType.Read;
@@ -52,6 +55,7 @@ internal static partial class ReadWatchEndpoints
 				Url = url,
 				Type = type,
 				Date = d,
+				IsActive = dto.IsActive ?? true,
 			};
 			db.ReadWatchItems.Add(item);
 			await db.SaveChangesAsync();

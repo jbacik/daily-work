@@ -199,6 +199,39 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
+    {
+        // Arrange — fill the 5-item active limit for a date
+        var testDate = "2019-12-01";
+        for (var i = 0; i < 5; i++)
+        {
+            var r = await _client.PostAsJsonAsync("/api/read-watch", new
+            {
+                Text = $"backlog-limit-active-{i}",
+                Type = "Read",
+                Date = testDate
+            });
+            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+        }
+
+        // Act — add a backlog item directly (should bypass the 5-item limit)
+        var response = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "backlog-direct-create-test",
+            Type = "Read",
+            Date = testDate,
+            IsActive = false
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+        Assert.NotNull(item);
+        Assert.False(item.IsActive);
+        Assert.Equal("backlog-direct-create-test", item.Title);
+    }
+
+    [Fact]
     public async Task PutReadWatch_SetsIsActiveFalse_BacklogsItem()
     {
         // Arrange

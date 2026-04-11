@@ -14,8 +14,8 @@ export const useReadWatchStore = defineStore('readWatch', () => {
     items.value = await client.get('/api/read-watch', { params }) as any
   }
 
-  async function create(text: string, type: ReadWatchItem['type'] = 'Read') {
-    const item: ReadWatchItem = await client.post('/api/read-watch', { text, type }) as any
+  async function create(text: string, type: ReadWatchItem['type'] = 'Read', isActive = true) {
+    const item: ReadWatchItem = await client.post('/api/read-watch', { text, type, isActive }) as any
     items.value.push(item)
   }
 
