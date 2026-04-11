@@ -41,9 +41,9 @@ internal static partial class ReadWatchEndpoints
 			var d = dto.Date ?? dateTime.UtcToday;
 			if (dto.IsActive != false)
 			{
-				var count = await db.ReadWatchItems.CountAsync(r => r.Date == d && r.IsActive && !r.IsDone);
+				var count = await db.ReadWatchItems.CountAsync(r => r.IsActive && !r.IsDone);
 				if (count >= 5)
-					return Results.Problem("Maximum of 5 read/watch items per day.", statusCode: 400);
+					return Results.Problem("Maximum of 5 active read/watch items.", statusCode: 400);
 			}
 
 			var (title, url) = ParseTextForUrl(dto.Text);

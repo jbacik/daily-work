@@ -201,25 +201,27 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
     {
-        // Arrange — fill the 5-item active limit for a date
-        var testDate = "2019-12-01";
+        // Arrange — backlog all existing active items, then fill the global limit
+        var existing = await (await _client.GetAsync("/api/read-watch"))
+            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+        foreach (var e in existing!)
+            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
+
         for (var i = 0; i < 5; i++)
         {
             var r = await _client.PostAsJsonAsync("/api/read-watch", new
             {
                 Text = $"backlog-limit-active-{i}",
-                Type = "Read",
-                Date = testDate
+                Type = "Read"
             });
             Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         }
 
-        // Act — add a backlog item directly (should bypass the 5-item limit)
+        // Act — add a backlog item directly (should bypass the global limit)
         var response = await _client.PostAsJsonAsync("/api/read-watch", new
         {
             Text = "backlog-direct-create-test",
             Type = "Read",
-            Date = testDate,
             IsActive = false
         });
 
@@ -325,35 +327,42 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
     {
-        var testDate = "2019-11-01";
+        // Arrange — backlog all existing active items so the global count starts at 0
+        var existing = await (await _client.GetAsync("/api/read-watch"))
+            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+        foreach (var e in existing!)
+            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
 
-        // Arrange — create 5 items
+        // Create 5 active items
         var createdIds = new List<int>();
         for (var i = 0; i < 5; i++)
         {
             var resp = await _client.PostAsJsonAsync("/api/read-watch", new
             {
                 Text = $"limit-test-item-{i}",
-                Type = "Read",
-                Date = testDate
+                Type = "Read"
             });
             Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
             var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
             createdIds.Add(item!.Id);
         }
 
-        // Backlog one of them — active count drops to 4
-        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
-
-        // Act — add a 6th item; active count is 4 so it should succeed
-        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        // 6th active item should be rejected
+        var rejectedResp = await _client.PostAsJsonAsync("/api/read-watch", new
         {
             Text = "limit-test-sixth-item",
-            Type = "Read",
-            Date = testDate
+            Type = "Read"
         });
+        Assert.Equal(HttpStatusCode.BadRequest, rejectedResp.StatusCode);
 
-        // Assert
+        // Backlog one — active count drops to 4, next add should succeed
+        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
+
+        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "limit-test-sixth-after-backlog",
+            Type = "Read"
+        });
         Assert.Equal(HttpStatusCode.Created, sixthResp.StatusCode);
     }
 
