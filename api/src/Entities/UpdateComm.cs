@@ -20,3 +20,8 @@ internal class WeeklyUpdateComm : UpdateComm
 {
     public WeeklyUpdateComm() { CommType = CommType.WeeklyUpdate; }
 }
+
+internal class WeeklySummaryComm : UpdateComm
+{
+    public WeeklySummaryComm() { CommType = CommType.WeeklySummary; }
+}

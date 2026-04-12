@@ -31,7 +31,8 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
             e.ToTable("UpdateComms");
             e.HasDiscriminator(c => c.CommType)
              .HasValue<DailyStandupComm>(CommType.DailyStandup)
-             .HasValue<WeeklyUpdateComm>(CommType.WeeklyUpdate);
+             .HasValue<WeeklyUpdateComm>(CommType.WeeklyUpdate)
+             .HasValue<WeeklySummaryComm>(CommType.WeeklySummary);
             e.HasIndex(c => new { c.Date, c.CommType }).IsUnique();
         });
 

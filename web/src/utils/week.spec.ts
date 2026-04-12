@@ -1,4 +1,4 @@
-import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex } from './week'
+import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange } from './week'
 
 describe('week utils', () => {
   describe('DAYS', () => {
@@ -138,6 +138,60 @@ describe('week utils', () => {
 
       expect(getDateForDayIndex(0)).toBe('2026-04-06')
       expect(getDateForDayIndex(4)).toBe('2026-04-10')
+    })
+  })
+
+  describe('getRecentWeekStarts', () => {
+    it('getRecentWeekStarts_ReturnsFiveMondaysInDescendingOrder_WhenCountIsFive', () => {
+      vi.setSystemTime(new Date('2026-04-08T12:00:00Z')) // Wednesday
+
+      expect(getRecentWeekStarts(5)).toEqual([
+        '2026-04-06',
+        '2026-03-30',
+        '2026-03-23',
+        '2026-03-16',
+        '2026-03-09',
+      ])
+    })
+
+    it('getRecentWeekStarts_ReturnsOnlyCurrentWeek_WhenCountIsOne', () => {
+      vi.setSystemTime(new Date('2026-04-08T12:00:00Z'))
+
+      expect(getRecentWeekStarts(1)).toEqual(['2026-04-06'])
+    })
+
+    it('getRecentWeekStarts_ReturnsEmptyArray_WhenCountIsZero', () => {
+      vi.setSystemTime(new Date('2026-04-08T12:00:00Z'))
+
+      expect(getRecentWeekStarts(0)).toEqual([])
+    })
+
+    it('getRecentWeekStarts_CrossesMonthBoundary_WhenWeekSpansMonths', () => {
+      vi.setSystemTime(new Date('2026-05-06T12:00:00Z')) // Wed in week of May 4
+
+      expect(getRecentWeekStarts(3)).toEqual([
+        '2026-05-04',
+        '2026-04-27',
+        '2026-04-20',
+      ])
+    })
+  })
+
+  describe('formatWeekRange', () => {
+    it('formatWeekRange_ReturnsAbbreviatedMonthWithDayOnly_WhenMondayAndFridayShareMonth', () => {
+      expect(formatWeekRange('2026-04-06')).toBe('Apr 6 \u2013 10')
+    })
+
+    it('formatWeekRange_ReturnsBothMonths_WhenFridayFallsInNextMonth', () => {
+      expect(formatWeekRange('2026-04-27')).toBe('Apr 27 \u2013 May 1')
+    })
+
+    it('formatWeekRange_HandlesYearEndWeek_WhenFridayIsInJanuary', () => {
+      expect(formatWeekRange('2026-12-28')).toBe('Dec 28 \u2013 Jan 1')
+    })
+
+    it('formatWeekRange_HandlesSingleDigitDays_WhenEarlyInMonth', () => {
+      expect(formatWeekRange('2026-03-02')).toBe('Mar 2 \u2013 6')
     })
   })
 
