@@ -16,7 +16,7 @@ internal static partial class ReadWatchEndpoints
 	{
 		var group = app.MapGroup("/api/read-watch");
 
-		group.MapGet("/", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly? date, DateOnly? weekOf) =>
+		group.MapGet("/", async (AppDbContext db, DateOnly? weekOf) =>
 		{
 			if (weekOf is not null)
 			{
@@ -28,11 +28,10 @@ internal static partial class ReadWatchEndpoints
 					.ToListAsync();
 			}
 
-			// Daily view: active, not-done items for the given date
-			var d = date ?? dateTime.UtcToday;
+			// Daily view: all active, not-done items regardless of date
 			return await db.ReadWatchItems
 				.AsNoTracking()
-				.Where(r => r.Date == d && r.IsActive && !r.IsDone)
+				.Where(r => r.IsActive && !r.IsDone)
 				.OrderBy(r => r.CreatedAt)
 				.ToListAsync();
 		});
@@ -40,9 +39,12 @@ internal static partial class ReadWatchEndpoints
 		group.MapPost("/", async (AppDbContext db, IDateTimeProvider dateTime, CreateReadWatchItemDto dto) =>
 		{
 			var d = dto.Date ?? dateTime.UtcToday;
-			var count = await db.ReadWatchItems.CountAsync(r => r.Date == d && r.IsActive && !r.IsDone);
-			if (count >= 5)
-				return Results.Problem("Maximum of 5 read/watch items per day.", statusCode: 400);
+			if (dto.IsActive != false)
+			{
+				var count = await db.ReadWatchItems.CountAsync(r => r.IsActive && !r.IsDone);
+				if (count >= 5)
+					return Results.Problem("Maximum of 5 active read/watch items.", statusCode: 400);
+			}
 
 			var (title, url) = ParseTextForUrl(dto.Text);
 			var type = Enum.TryParse<ReadWatchType>(dto.Type, ignoreCase: true, out var parsed) ? parsed : ReadWatchType.Read;
@@ -53,6 +55,7 @@ internal static partial class ReadWatchEndpoints
 				Url = url,
 				Type = type,
 				Date = d,
+				IsActive = dto.IsActive ?? true,
 			};
 			db.ReadWatchItems.Add(item);
 			await db.SaveChangesAsync();

@@ -1,6 +1,6 @@
 namespace DailyWork.Api.Dtos;
 
-internal record CreateReadWatchItemDto(string Text, string? Type, DateOnly? Date);
+internal record CreateReadWatchItemDto(string Text, string? Type, DateOnly? Date, bool? IsActive);
 
 internal record UpdateReadWatchItemDto
 {
