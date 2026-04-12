@@ -90,36 +90,41 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetReadWatch_ByDate_ReturnsOnlyActiveNotDone()
+    public async Task GetReadWatch_NoParams_ReturnsAllActiveNotDoneAcrossDates()
     {
-        var testDate = "2019-02-01";
-
-        // Arrange — create an active item and a backlogged item
+        // Arrange — create active items on different dates
         await _client.PostAsJsonAsync("/api/read-watch", new
         {
-            Text = "active-date-filter-test",
+            Text = "active-date-a-test",
             Type = "Read",
-            Date = testDate
+            Date = "2019-02-01"
+        });
+        await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "active-date-b-test",
+            Type = "Read",
+            Date = "2019-02-05"
         });
 
         var backlogResp = await _client.PostAsJsonAsync("/api/read-watch", new
         {
-            Text = "backlog-date-filter-test",
+            Text = "backlog-cross-date-test",
             Type = "Read",
-            Date = testDate
+            Date = "2019-02-01"
         });
         var backlogItem = await backlogResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
         await _client.PutAsJsonAsync($"/api/read-watch/{backlogItem!.Id}", new { IsActive = false });
 
         // Act
-        var response = await _client.GetAsync($"/api/read-watch?date={testDate}");
+        var response = await _client.GetAsync("/api/read-watch");
 
         // Assert
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
         Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "active-date-filter-test");
-        Assert.DoesNotContain(items, i => i.Title == "backlog-date-filter-test");
+        Assert.Contains(items, i => i.Title == "active-date-a-test");
+        Assert.Contains(items, i => i.Title == "active-date-b-test");
+        Assert.DoesNotContain(items, i => i.Title == "backlog-cross-date-test");
     }
 
     [Fact]
@@ -191,6 +196,41 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
         Assert.NotNull(items);
         Assert.DoesNotContain(items, i => i.Title == "other-week-consumed-test");
+    }
+
+    [Fact]
+    public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
+    {
+        // Arrange — backlog all existing active items, then fill the global limit
+        var existing = await (await _client.GetAsync("/api/read-watch"))
+            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+        foreach (var e in existing!)
+            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
+
+        for (var i = 0; i < 5; i++)
+        {
+            var r = await _client.PostAsJsonAsync("/api/read-watch", new
+            {
+                Text = $"backlog-limit-active-{i}",
+                Type = "Read"
+            });
+            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+        }
+
+        // Act — add a backlog item directly (should bypass the global limit)
+        var response = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "backlog-direct-create-test",
+            Type = "Read",
+            IsActive = false
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+        Assert.NotNull(item);
+        Assert.False(item.IsActive);
+        Assert.Equal("backlog-direct-create-test", item.Title);
     }
 
     [Fact]
@@ -287,35 +327,42 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
     {
-        var testDate = "2019-11-01";
+        // Arrange — backlog all existing active items so the global count starts at 0
+        var existing = await (await _client.GetAsync("/api/read-watch"))
+            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+        foreach (var e in existing!)
+            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
 
-        // Arrange — create 5 items
+        // Create 5 active items
         var createdIds = new List<int>();
         for (var i = 0; i < 5; i++)
         {
             var resp = await _client.PostAsJsonAsync("/api/read-watch", new
             {
                 Text = $"limit-test-item-{i}",
-                Type = "Read",
-                Date = testDate
+                Type = "Read"
             });
             Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
             var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
             createdIds.Add(item!.Id);
         }
 
-        // Backlog one of them — active count drops to 4
-        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
-
-        // Act — add a 6th item; active count is 4 so it should succeed
-        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        // 6th active item should be rejected
+        var rejectedResp = await _client.PostAsJsonAsync("/api/read-watch", new
         {
             Text = "limit-test-sixth-item",
-            Type = "Read",
-            Date = testDate
+            Type = "Read"
         });
+        Assert.Equal(HttpStatusCode.BadRequest, rejectedResp.StatusCode);
 
-        // Assert
+        // Backlog one — active count drops to 4, next add should succeed
+        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
+
+        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+        {
+            Text = "limit-test-sixth-after-backlog",
+            Type = "Read"
+        });
         Assert.Equal(HttpStatusCode.Created, sixthResp.StatusCode);
     }
 

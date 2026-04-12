@@ -15,8 +15,12 @@ const store = useReadWatchStore()
 const newText = ref('')
 const newType = ref<'Read' | 'Watch' | 'Learn' | 'Experiment'>('Read')
 const isAdding = ref(false)
+const newBacklogText = ref('')
+const newBacklogType = ref<'Read' | 'Watch' | 'Learn' | 'Experiment'>('Read')
+const isAddingBacklog = ref(false)
 const showAll = ref(defaultShowAll)
 const inputRef = ref<HTMLInputElement | null>(null)
+const backlogInputRef = ref<HTMLInputElement | null>(null)
 
 // Modal state
 const modalItem = ref<ReadWatchItem | null>(null)
@@ -39,6 +43,24 @@ async function handleAddItem() {
   await store.create(text, newType.value)
   newText.value = ''
   isAdding.value = false
+}
+
+function startAddingBacklog() {
+  isAddingBacklog.value = true
+  nextTick(() => backlogInputRef.value?.focus())
+}
+
+function cancelAddBacklog() {
+  newBacklogText.value = ''
+  isAddingBacklog.value = false
+}
+
+async function handleAddBacklogItem() {
+  var text = newBacklogText.value.trim()
+  if (!text) return
+  await store.create(text, newBacklogType.value, false)
+  newBacklogText.value = ''
+  isAddingBacklog.value = false
 }
 
 function handleConsume(id: number) {
@@ -150,7 +172,7 @@ async function handleDelete(id: number) {
       </button>
 
       <template v-if="showAll">
-        <div v-if="store.backlogItems.length > 0" class="mt-4 pt-4 border-t border-border">
+        <div class="mt-4 pt-4 border-t border-border">
           <div class="text-muted-foreground text-xs uppercase tracking-wider mb-2">
             ─── Backlog ({{ store.backlogItems.length }}) ───
           </div>
@@ -165,11 +187,39 @@ async function handleDelete(id: number) {
               @delete="handleDelete"
             />
           </div>
+          <div v-if="isAddingBacklog" class="flex items-center gap-2 pt-2 mt-1">
+            <span class="text-primary">&gt;</span>
+            <select
+              v-model="newBacklogType"
+              class="bg-secondary text-secondary-foreground text-xs px-1 py-0.5 border border-border"
+            >
+              <option value="Read">READ</option>
+              <option value="Watch">WATCH</option>
+              <option value="Learn">LEARN</option>
+              <option value="Experiment">EXPERIMENT</option>
+            </select>
+            <input
+              ref="backlogInputRef"
+              v-model="newBacklogText"
+              type="text"
+              class="flex-1 bg-transparent border-none outline-none text-foreground text-sm"
+              placeholder="Article title, URL, or both..."
+              @keydown.enter="handleAddBacklogItem"
+              @keydown.escape="cancelAddBacklog"
+            />
+          </div>
+          <button
+            v-else
+            class="text-muted-foreground hover:text-primary text-sm mt-1"
+            @click="startAddingBacklog"
+          >
+            + add to backlog
+          </button>
         </div>
 
         <div v-if="store.completedItems.length > 0" class="mt-4 pt-4 border-t border-border">
           <div class="text-muted-foreground text-xs uppercase tracking-wider mb-2">
-            ─── Completed ({{ store.completedItems.length }}) ───
+            ─── Consumed This Week ({{ store.completedItems.length }}) ───
           </div>
           <div class="space-y-1 opacity-60">
             <ReadingItemRow
