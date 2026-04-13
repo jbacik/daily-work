@@ -2,7 +2,7 @@
 apply: "api/**"
 ---
 
-# EF Core / SQLite Migration Conventions
+# EF Core Migration Conventions
 
 ## Creating a Migration
 
@@ -30,10 +30,6 @@ After generating a migration, open the scaffolded `.cs` file and verify:
 
 Never manually edit `AppDbContextModelSnapshot.cs`.
 
-## SQLite Constraints
-
-SQLite does not support `ALTER COLUMN` or `DROP COLUMN`. When changing an existing column's type or nullability, EF Core's SQLite provider scaffolds a table rebuild automatically — trust the generated output, don't manually rewrite it.
-
 ## Adding Columns to Existing Tables
 
 When adding a non-nullable column to a table that may already have rows, either:
@@ -45,7 +41,7 @@ For this dev tool, nullable is preferred — data loss on schema change is accep
 
 ## Auto-Migration on Startup
 
-`Program.cs` calls `db.Database.Migrate()` at startup, which applies all pending migrations to `dailywork.db` automatically. The test factory does the same against in-memory SQLite. Never replace `Migrate()` with `EnsureCreated()` — it bypasses the migration system.
+`Program.cs` calls `db.Database.Migrate()` at startup, which applies all pending migrations to the Aspire-provisioned PostgreSQL database automatically. The test factory does the same against the Postgres Testcontainer spun up per class fixture. Never replace `Migrate()` with `EnsureCreated()` — it bypasses the migration system.
 
 ## `OnModelCreating` Conventions
 

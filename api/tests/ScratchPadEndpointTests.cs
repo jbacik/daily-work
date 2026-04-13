@@ -7,8 +7,9 @@ using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class ScratchPadEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class ScratchPadEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -20,8 +21,12 @@ public class ScratchPadEndpointTests : IClassFixture<CustomWebApplicationFactory
 
     public ScratchPadEndpointTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task GetScratchPad_ReturnsNullContent_WhenNoActiveRecord()

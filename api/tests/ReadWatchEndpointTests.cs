@@ -8,8 +8,9 @@ using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -19,8 +20,12 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
     public ReadWatchEndpointTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task PostReadWatch_ParsesUrlFromText_ReturnsCreated()
@@ -201,12 +206,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
     {
-        // Arrange — backlog all existing active items, then fill the global limit
-        var existing = await (await _client.GetAsync("/api/read-watch"))
-            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        foreach (var e in existing!)
-            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
-
+        // Arrange — fill the global active limit
         for (var i = 0; i < 5; i++)
         {
             var r = await _client.PostAsJsonAsync("/api/read-watch", new
@@ -327,13 +327,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
     {
-        // Arrange — backlog all existing active items so the global count starts at 0
-        var existing = await (await _client.GetAsync("/api/read-watch"))
-            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        foreach (var e in existing!)
-            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
-
-        // Create 5 active items
+        // Arrange — create 5 active items
         var createdIds = new List<int>();
         for (var i = 0; i < 5; i++)
         {
