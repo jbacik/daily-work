@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Npgsql;
+using Respawn;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -14,6 +16,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
 {
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16.8-alpine")
         .Build();
+
+    private Respawner _respawner = null!;
 
     public FakeDateTimeProvider DateTimeProvider { get; } = new FakeDateTimeProvider();
     public FakeChatCompletionService ChatCompletionService { get; } = new();
@@ -25,6 +29,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IA
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
+
+        await using var conn = new NpgsqlConnection(_db.GetConnectionString());
+        await conn.OpenAsync();
+        _respawner = await Respawner.CreateAsync(conn, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.Postgres,
+            SchemasToInclude = ["public"],
+            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
+        });
+    }
+
+    public async Task ResetDatabaseAsync()
+    {
+        await using var conn = new NpgsqlConnection(_db.GetConnectionString());
+        await conn.OpenAsync();
+        await _respawner.ResetAsync(conn);
     }
 
     async Task IAsyncLifetime.DisposeAsync() => await _db.DisposeAsync();

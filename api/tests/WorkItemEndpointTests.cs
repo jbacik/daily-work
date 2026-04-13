@@ -9,7 +9,7 @@ using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -28,6 +28,9 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task GetWorkItems_ReturnsEmptyList_WhenNoItemsForWeek()

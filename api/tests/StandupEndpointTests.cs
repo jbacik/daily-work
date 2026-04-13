@@ -7,7 +7,7 @@ using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly CustomWebApplicationFactory _factory;
@@ -25,6 +25,9 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task GenerateStandup_ReturnsMarkdown_WhenItemsExist()
