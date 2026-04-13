@@ -6,11 +6,12 @@ apply: "api/tests/**"
 
 ## Test Class Setup
 
-Every test class implements `IClassFixture<CustomWebApplicationFactory>` and receives an `HttpClient` via constructor. Define shared JSON options as a static field:
+Every test class implements `IClassFixture<CustomWebApplicationFactory>` and `IAsyncLifetime`, stores the factory for the Respawn reset hook, and receives an `HttpClient` via constructor. Define shared JSON options as a static field:
 
 ```csharp
-public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
+    private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -20,8 +21,12 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
     public WorkItemEndpointTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 }
 ```
 
@@ -69,7 +74,7 @@ public async Task PostWorkItem_CreatesItem_ReturnsCreated()
 
 ## NSubstitute
 
-NSubstitute is available but integration tests go through the real HTTP stack with in-memory SQLite — do not mock the database or EF Core. Only use NSubstitute for mocking something outside the HTTP pipeline (e.g., an external service). Do not use Moq (not in the project).
+NSubstitute is available but integration tests go through the real HTTP stack against a Postgres Testcontainer — do not mock the database or EF Core. Only use NSubstitute for mocking something outside the HTTP pipeline (e.g., an external service). Do not use Moq (not in the project).
 
 ## `CustomWebApplicationFactory`
 

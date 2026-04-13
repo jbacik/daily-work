@@ -87,7 +87,7 @@ internal enum WorkItemCategory
 }
 ```
 
-- Stored as **integers** in SQLite (EF Core default — do not add `HasConversion<string>()`)
+- Stored as **integers** in PostgreSQL (EF Core default — do not add `HasConversion<string>()`)
 - The global `JsonStringEnumConverter` in `Program.cs` handles string↔int for the API surface
 - Parse from DTO strings: `Enum.TryParse<TEnum>(dto.Value, out var val) ? val : DefaultValue`
 
