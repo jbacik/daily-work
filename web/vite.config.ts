@@ -13,5 +13,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    pool: 'forks',
+    env: {
+      TZ: 'America/New_York',
+    },
   },
 })
