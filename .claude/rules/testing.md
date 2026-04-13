@@ -6,7 +6,7 @@ apply: "api/tests/**"
 
 ## Test Class Setup
 
-Every test class implements `IClassFixture<CustomWebApplicationFactory>` and `IAsyncLifetime`, stores the factory for the Respawn reset hook, and receives an `HttpClient` via constructor. Define shared JSON options as a static field:
+Every integration/endpoint test class implements `IClassFixture<CustomWebApplicationFactory>` and `IAsyncLifetime`, stores the factory for the Respawn reset hook, and receives an `HttpClient` via constructor. Define shared JSON options as a static field:
 
 ```csharp
 public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
