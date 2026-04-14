@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Entities;
 using DailyWork.Api.Tests.Fixtures;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
@@ -37,11 +38,11 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Date = "2019-01-01"
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Interesting article", item.Title);
-        Assert.Equal("https://example.com/article", item.Url);
+        item.ShouldNotBeNull();
+        item.Title.ShouldBe("Interesting article");
+        item.Url.ShouldBe("https://example.com/article");
     }
 
     [Fact]
@@ -54,11 +55,11 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Date = "2019-01-02"
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Learn about design patterns", item.Title);
-        Assert.Equal(string.Empty, item.Url);
+        item.ShouldNotBeNull();
+        item.Title.ShouldBe("Learn about design patterns");
+        item.Url.ShouldBe(string.Empty);
     }
 
     [Fact]
@@ -71,11 +72,11 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Date = "2019-01-03"
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("https://example.com/video", item.Title);
-        Assert.Equal("https://example.com/video", item.Url);
+        item.ShouldNotBeNull();
+        item.Title.ShouldBe("https://example.com/video");
+        item.Url.ShouldBe("https://example.com/video");
     }
 
     [Fact]
@@ -88,10 +89,10 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Date = "2019-01-04"
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Learn", item.Type.ToString());
+        item.ShouldNotBeNull();
+        item.Type.ToString().ShouldBe("Learn");
     }
 
     [Fact]
@@ -126,10 +127,10 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "active-date-a-test");
-        Assert.Contains(items, i => i.Title == "active-date-b-test");
-        Assert.DoesNotContain(items, i => i.Title == "backlog-cross-date-test");
+        items.ShouldNotBeNull();
+        items.ShouldContain(i => i.Title == "active-date-a-test");
+        items.ShouldContain(i => i.Title == "active-date-b-test");
+        items.ShouldNotContain(i => i.Title == "backlog-cross-date-test");
     }
 
     [Fact]
@@ -167,9 +168,9 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "weekof-active-test");
-        Assert.Contains(items, i => i.Title == "weekof-consumed-test");
+        items.ShouldNotBeNull();
+        items.ShouldContain(i => i.Title == "weekof-active-test");
+        items.ShouldContain(i => i.Title == "weekof-consumed-test");
     }
 
     [Fact]
@@ -199,8 +200,8 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.DoesNotContain(items, i => i.Title == "other-week-consumed-test");
+        items.ShouldNotBeNull();
+        items.ShouldNotContain(i => i.Title == "other-week-consumed-test");
     }
 
     [Fact]
@@ -214,7 +215,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
                 Text = $"backlog-limit-active-{i}",
                 Type = "Read"
             });
-            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+            r.StatusCode.ShouldBe(HttpStatusCode.Created);
         }
 
         // Act — add a backlog item directly (should bypass the global limit)
@@ -226,11 +227,11 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.False(item.IsActive);
-        Assert.Equal("backlog-direct-create-test", item.Title);
+        item.ShouldNotBeNull();
+        item.IsActive.ShouldBeFalse();
+        item.Title.ShouldBe("backlog-direct-create-test");
     }
 
     [Fact]
@@ -251,8 +252,8 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(updated);
-        Assert.False(updated.IsActive);
+        updated.ShouldNotBeNull();
+        updated.IsActive.ShouldBeFalse();
     }
 
     [Fact]
@@ -274,8 +275,8 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(updated);
-        Assert.True(updated.IsActive);
+        updated.ShouldNotBeNull();
+        updated.IsActive.ShouldBeTrue();
     }
 
     [Fact]
@@ -303,12 +304,12 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.EnsureSuccessStatusCode();
         var consumed = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(consumed);
-        Assert.True(consumed.IsDone);
-        Assert.False(consumed.IsActive);
-        Assert.True(consumed.WorthSharing);
-        Assert.Equal("Very insightful article", consumed.Notes);
-        Assert.Equal(testWeekOf, consumed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        consumed.ShouldNotBeNull();
+        consumed.IsDone.ShouldBeTrue();
+        consumed.IsActive.ShouldBeFalse();
+        consumed.WorthSharing.ShouldBe(true);
+        consumed.Notes.ShouldBe("Very insightful article");
+        consumed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ShouldBe(testWeekOf);
     }
 
     [Fact]
@@ -321,7 +322,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             WeekOf = "2019-09-02"
         });
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -336,7 +337,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
                 Text = $"limit-test-item-{i}",
                 Type = "Read"
             });
-            Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
+            resp.StatusCode.ShouldBe(HttpStatusCode.Created);
             var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
             createdIds.Add(item!.Id);
         }
@@ -347,7 +348,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Text = "limit-test-sixth-item",
             Type = "Read"
         });
-        Assert.Equal(HttpStatusCode.BadRequest, rejectedResp.StatusCode);
+        rejectedResp.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
         // Backlog one — active count drops to 4, next add should succeed
         await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
@@ -357,7 +358,7 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
             Text = "limit-test-sixth-after-backlog",
             Type = "Read"
         });
-        Assert.Equal(HttpStatusCode.Created, sixthResp.StatusCode);
+        sixthResp.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
     [Fact]
@@ -393,9 +394,9 @@ public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Assert — WeekConsumed must still reflect the original week
         reviewResp.EnsureSuccessStatusCode();
         var reviewed = await reviewResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(reviewed);
-        Assert.Equal(originalWeekOf, reviewed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
-        Assert.Equal("Updated notes", reviewed.Notes);
-        Assert.False(reviewed.WorthSharing);
+        reviewed.ShouldNotBeNull();
+        reviewed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ShouldBe(originalWeekOf);
+        reviewed.Notes.ShouldBe("Updated notes");
+        reviewed.WorthSharing.ShouldBe(false);
     }
 }
