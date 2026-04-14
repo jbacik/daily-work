@@ -3,11 +3,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Tests.Fixtures;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly CustomWebApplicationFactory _factory;
@@ -25,6 +26,9 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task GenerateStandup_ReturnsMarkdown_WhenItemsExist()
@@ -44,10 +48,11 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var markdown = result.GetProperty("markdown").GetString();
-        Assert.Contains("Crushed it", markdown!);
+        markdown.ShouldNotBeNull();
+        markdown.ShouldContain("Crushed it");
     }
 
     [Fact]
@@ -57,7 +62,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.PostAsync("/api/standup/generate?weekOf=1999-01-04", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -67,7 +72,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.PostAsync("/api/standup/generate", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -77,7 +82,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.GetAsync("/api/standup?date=1999-01-01");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -94,15 +99,15 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.Equal("### Did you complete?\nYes!", result.GetProperty("markdown").GetString());
+        result.GetProperty("markdown").GetString().ShouldBe("### Did you complete?\nYes!");
 
         // Verify via GET
         var getResponse = await _client.GetAsync($"/api/standup?date={uniqueDate}");
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
         var getResult = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.Contains("Yes!", getResult.GetProperty("markdown").GetString()!);
+        getResult.GetProperty("markdown").GetString()!.ShouldContain("Yes!");
     }
 
     [Fact]
@@ -163,9 +168,39 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var getResponse = await _client.GetAsync($"/api/standup?date={uniqueDate}");
         var result = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.Contains("Second version", result.GetProperty("markdown").GetString()!);
+        result.GetProperty("markdown").GetString()!.ShouldContain("Second version");
+    }
+
+    [Fact]
+    public async Task GetStandup_ReturnsEntryForSpecificDate_WhenMultipleDatesExist()
+    {
+        // Arrange: save standups for two different dates
+        var olderDate = "2020-03-01";
+        var newerDate = "2020-03-10";
+
+        await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### Old standup\nOld content.",
+            Date = olderDate,
+        });
+
+        await _client.PostAsJsonAsync("/api/standup", new
+        {
+            Markdown = "### New standup\nNew content.",
+            Date = newerDate,
+        });
+
+        // Act: query for the newer date only
+        var response = await _client.GetAsync($"/api/standup?date={newerDate}");
+
+        // Assert: should return the queried date's entry, not the oldest
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var markdown = result.GetProperty("markdown").GetString()!;
+        markdown.ShouldContain("New content");
+        markdown.ShouldNotContain("Old content");
     }
 }

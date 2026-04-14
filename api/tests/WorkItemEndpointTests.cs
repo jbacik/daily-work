@@ -9,7 +9,7 @@ using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -29,6 +29,9 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         _client = factory.CreateClient();
     }
 
+    public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
+
     [Fact]
     public async Task GetWorkItems_ReturnsEmptyList_WhenNoItemsForWeek()
     {
@@ -36,8 +39,8 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Empty(items);
+        items.ShouldNotBeNull();
+        items.ShouldBeEmpty();
     }
 
     [Fact]
@@ -45,7 +48,7 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
     {
         var response = await _client.GetAsync("/api/work-items");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -55,10 +58,10 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PostAsJsonAsync("/api/work-items", payload);
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Test item", item.Title);
+        item.ShouldNotBeNull();
+        item.Title.ShouldBe("Test item");
     }
 
     [Fact]
@@ -69,10 +72,10 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PostAsJsonAsync("/api/work-items", payload);
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
         var item = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal(TestWeekOf, item.WeekOf);
+        item.ShouldNotBeNull();
+        item.WeekOf.ShouldBe(TestWeekOf);
     }
 
     [Fact]
@@ -86,8 +89,8 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "Week filter test item");
+        items.ShouldNotBeNull();
+        items.ShouldContain(i => i.Title == "Week filter test item");
     }
 
     [Fact]
@@ -103,7 +106,7 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Over cap", Category = "SmallThing", Date = date });
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]
@@ -130,9 +133,9 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>
         // Fetch the week and verify only item2 is BigThing
         var getResponse = await _client.GetAsync($"/api/work-items?weekOf={TestWeekOf}");
         var items = await getResponse.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.DoesNotContain(items, i => i.Id == item1.Id && i.Category.ToString() == "BigThing");
-        Assert.Contains(items, i => i.Id == item2.Id && i.Category.ToString() == "BigThing");
+        items.ShouldNotBeNull();
+        items.ShouldNotContain(i => i.Id == item1.Id && i.Category.ToString() == "BigThing");
+        items.ShouldContain(i => i.Id == item2.Id && i.Category.ToString() == "BigThing");
     }
 
     [Fact]

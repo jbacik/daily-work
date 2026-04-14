@@ -1,4 +1,5 @@
 using DailyWork.Api.Prompts;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
@@ -10,8 +11,8 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Tuesday);
 
-        Assert.Contains("Did you complete your One Thing yesterday", prompt);
-        Assert.Contains("What's the One Thing you will complete today", prompt);
+        prompt.ShouldContain("Did you complete your One Thing yesterday");
+        prompt.ShouldContain("What's the One Thing you will complete today");
     }
 
     [Fact]
@@ -19,7 +20,7 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Wednesday);
 
-        Assert.Contains("Did you complete your One Thing yesterday", prompt);
+        prompt.ShouldContain("Did you complete your One Thing yesterday");
     }
 
     [Fact]
@@ -27,7 +28,7 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Thursday);
 
-        Assert.Contains("Did you complete your One Thing yesterday", prompt);
+        prompt.ShouldContain("Did you complete your One Thing yesterday");
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Monday);
 
-        Assert.Contains("Monday", prompt);
+        prompt.ShouldContain("Monday");
     }
 
     [Fact]
@@ -43,11 +44,11 @@ public class StandupPromptTests
     {
         var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Friday);
 
-        Assert.Contains("Did you complete your One Thing yesterday", prompt);
-        Assert.Contains("What's the One Thing you will complete today", prompt);
-        Assert.Contains("experiment, improvement, or lesson", prompt);
-        Assert.Contains("Experiment", prompt);
-        Assert.Contains("worthSharing", prompt);
+        prompt.ShouldContain("Did you complete your One Thing yesterday");
+        prompt.ShouldContain("What's the One Thing you will complete today");
+        prompt.ShouldContain("experiment, improvement, or lesson");
+        prompt.ShouldContain("Experiment");
+        prompt.ShouldContain("worthSharing");
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public class StandupPromptTests
         var saturday = StandupPrompts.GetSystemPrompt(DayOfWeek.Saturday);
         var sunday = StandupPrompts.GetSystemPrompt(DayOfWeek.Sunday);
 
-        Assert.Contains("Did you complete your One Thing yesterday", saturday);
-        Assert.Contains("Did you complete your One Thing yesterday", sunday);
+        saturday.ShouldContain("Did you complete your One Thing yesterday");
+        sunday.ShouldContain("Did you complete your One Thing yesterday");
     }
 
     [Fact]
@@ -67,9 +68,9 @@ public class StandupPromptTests
 
         var message = StandupPrompts.BuildUserMessage(json, "2026-04-07");
 
-        Assert.Contains("Today's date: 2026-04-07", message);
-        Assert.Contains(json, message);
-        Assert.DoesNotContain("Learning queue", message);
+        message.ShouldContain("Today's date: 2026-04-07");
+        message.ShouldContain(json);
+        message.ShouldNotContain("Learning queue");
     }
 
     [Fact]
@@ -80,9 +81,9 @@ public class StandupPromptTests
 
         var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-10", learningJson);
 
-        Assert.Contains("Today's date: 2026-04-10", message);
-        Assert.Contains(workJson, message);
-        Assert.Contains("Learning queue items consumed this week", message);
-        Assert.Contains(learningJson, message);
+        message.ShouldContain("Today's date: 2026-04-10");
+        message.ShouldContain(workJson);
+        message.ShouldContain("Learning queue items consumed this week");
+        message.ShouldContain(learningJson);
     }
 }
