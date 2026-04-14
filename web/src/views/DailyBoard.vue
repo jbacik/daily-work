@@ -133,7 +133,7 @@ onMounted(() => {
               type="button"
               class="flex w-full hover:bg-secondary/50 transition-colors"
               :aria-pressed="view === 'daily'"
-              @click="view = 'daily'"
+              @click="view = 'daily'; selectedWeek = currentWeekStart"
             >
               <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
               <span> Day: {{ currentDayLabel }}</span>
