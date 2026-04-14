@@ -33,6 +33,7 @@ const currentWeekStart = getWeekStart()
 const recentWeeks = getRecentWeekStarts(5)
 const selectedWeek = ref<string>(currentWeekStart)
 const isPastWeek = computed(() => selectedWeek.value !== currentWeekStart)
+const selectedWeekMonday = computed(() => new Date(`${selectedWeek.value}T00:00:00`))
 
 const modalTitle = computed(() => {
   switch (activeCommand.value) {
@@ -90,45 +91,45 @@ onMounted(() => {
               <span class="text-muted-foreground text-sm">v1.0.0</span>
             </h1>
             <p class="text-muted-foreground text-sm mt-1">
-              Weekly task tracker // {{ formatDate(launchTime) }}
+              Weekly task tracker //
+              <template v-if="view === 'weekly'">
+                <span>{{ formatDate(selectedWeekMonday) }}</span>
+                <span class="relative inline-block ml-1">
+                  <select
+                    v-model="selectedWeek"
+                    data-testid="week-dropdown"
+                    class="bg-transparent text-muted-foreground border-none outline-none cursor-pointer appearance-none pr-3"
+                  >
+                    <option
+                      v-for="(w, i) in recentWeeks"
+                      :key="w"
+                      :value="w"
+                      class="bg-card text-foreground"
+                    >
+                      {{ i === 0 ? '(current)' : `(${formatWeekRange(w)})` }}
+                    </option>
+                  </select>
+                  <span class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground">▾</span>
+                </span>
+              </template>
+              <template v-else>{{ formatDate(launchTime) }}</template>
             </p>
           </div>
 
           <!-- Navigation Box -->
           <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono w-fit">
             <div>┌────────────────────────────┐</div>
-            <div class="flex items-center">
-              <span class="text-accent w-4">~</span>
-              <span> Week of:&nbsp;</span>
-              <select
-                v-model="selectedWeek"
-                data-testid="week-dropdown"
-                class="bg-transparent text-foreground border-none outline-none cursor-pointer"
-              >
-                <option
-                  v-for="(w, i) in recentWeeks"
-                  :key="w"
-                  :value="w"
-                  class="bg-card text-foreground"
-                >
-                  {{ formatWeekRange(w) }}{{ i === 0 ? ' (current)' : '' }}
-                </option>
-              </select>
-              <span class="ml-auto">│</span>
-            </div>
             <button
-              v-if="!isPastWeek"
               type="button"
               class="flex w-full hover:bg-secondary/50 transition-colors"
               :aria-pressed="view === 'weekly'"
               @click="view = 'weekly'"
             >
               <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
-              <span> View: Weekly</span>
+              <span> Week of: {{ dailyTasks.weekOf }}</span>
               <span class="ml-auto">│</span>
             </button>
             <button
-              v-if="!isPastWeek"
               type="button"
               class="flex w-full hover:bg-secondary/50 transition-colors"
               :aria-pressed="view === 'daily'"
