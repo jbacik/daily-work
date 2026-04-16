@@ -14,6 +14,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     pool: 'forks',
+    server: {
+      deps: {
+        inline: ['@asamuzakjp/css-color', '@csstools/css-calc'],
+      },
+    },
     env: {
       TZ: 'America/New_York',
     },
