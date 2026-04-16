@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Tests.Fixtures;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Shouldly;
 using Xunit;
 
@@ -53,6 +54,31 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
         var markdown = result.GetProperty("markdown").GetString();
         markdown.ShouldNotBeNull();
         markdown.ShouldContain("Crushed it");
+    }
+
+    [Fact]
+    public async Task GenerateStandup_IncludesYesterdayDateInPrompt_WhenGenerating()
+    {
+        // Arrange
+        _factory.ChatCompletionService.ResponseContent = "ok";
+
+        await _client.PostAsJsonAsync("/api/work-items", new
+        {
+            Title = "Yesterday test item",
+            Category = "SmallThing",
+            Date = "2020-01-14",
+        });
+
+        // Act — today is Wednesday 2020-01-15, so yesterday should be 2020-01-14
+        var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var userMessage = _factory.ChatCompletionService.LastChatHistory!
+            .Last(m => m.Role == AuthorRole.User)
+            .Content!;
+        userMessage.ShouldContain("Today's date: 2020-01-15");
+        userMessage.ShouldContain("Yesterday's date: 2020-01-14");
     }
 
     [Fact]
