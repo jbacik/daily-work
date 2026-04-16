@@ -44,8 +44,8 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
             Date = "2020-01-15",
         });
 
-        // Act
-        var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}", null);
+        // Act — pass today explicitly (client's local date)
+        var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -53,6 +53,28 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
         var markdown = result.GetProperty("markdown").GetString();
         markdown.ShouldNotBeNull();
         markdown.ShouldContain("Crushed it");
+    }
+
+    [Fact]
+    public async Task GenerateStandup_FallsBackToUtc_WhenTodayNotProvided()
+    {
+        // Arrange
+        _factory.ChatCompletionService.ResponseContent = "Fallback test";
+
+        await _client.PostAsJsonAsync("/api/work-items", new
+        {
+            Title = "Fallback item",
+            Category = "SmallThing",
+            Date = "2020-01-15",
+        });
+
+        // Act — omit today param
+        var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}", null);
+
+        // Assert — should still succeed using UtcToday fallback
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        result.GetProperty("markdown").GetString().ShouldNotBeNull();
     }
 
     [Fact]

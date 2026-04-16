@@ -67,7 +67,8 @@ internal static class StandupEndpoints
             IDateTimeProvider dateTime,
             IChatCompletionService? chatService,
             string? weekOf,
-            string? commandType) =>
+            string? commandType,
+            DateOnly? today) =>
         {
             if (chatService is null)
                 return Results.Problem("Azure OpenAI is not configured.", statusCode: 503);
@@ -75,7 +76,7 @@ internal static class StandupEndpoints
             if (weekOf is null)
                 return Results.BadRequest("weekOf query parameter is required.");
 
-            var today = dateTime.UtcToday;
+            var todayDate = today ?? dateTime.UtcToday;
 
             var items = await db.WorkItems
                 .AsNoTracking()
@@ -90,7 +91,7 @@ internal static class StandupEndpoints
                 return Results.BadRequest("No work items found for the specified week.");
 
             // For Monday prompts or weekly command, also fetch previous week's items
-            var dayOfWeek = today.DayOfWeek;
+            var dayOfWeek = todayDate.DayOfWeek;
             var useWeeklyPrompt = string.Equals(commandType, "weekly", StringComparison.OrdinalIgnoreCase);
 
             if (dayOfWeek == DayOfWeek.Monday || useWeeklyPrompt)
@@ -133,7 +134,7 @@ internal static class StandupEndpoints
 
             var chatHistory = new ChatHistory();
             chatHistory.AddSystemMessage(systemPrompt);
-            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(workItemsJson, today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), learningQueueJson));
+            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(workItemsJson, todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), learningQueueJson));
 
             var response = await chatService.GetChatMessageContentAsync(chatHistory);
 

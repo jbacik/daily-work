@@ -122,7 +122,7 @@ async function generate() {
   startDotAnimation()
 
   try {
-    const params: Record<string, string> = { weekOf }
+    const params: Record<string, string> = { weekOf, today: getToday() }
     if (commandType === 'weekly') params.commandType = 'weekly'
 
     const data = await client.post('/api/standup/generate', null, { params }) as any
