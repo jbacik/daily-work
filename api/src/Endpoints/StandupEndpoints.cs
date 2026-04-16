@@ -68,7 +68,7 @@ internal static class StandupEndpoints
             IChatCompletionService? chatService,
             string? weekOf,
             string? commandType,
-            string? today) =>
+            DateOnly? today) =>
         {
             if (chatService is null)
                 return Results.Problem("Azure OpenAI is not configured.", statusCode: 503);
@@ -76,9 +76,7 @@ internal static class StandupEndpoints
             if (weekOf is null)
                 return Results.BadRequest("weekOf query parameter is required.");
 
-            var todayDate = today is not null
-                ? DateOnly.Parse(today, CultureInfo.InvariantCulture)
-                : dateTime.UtcToday;
+            var todayDate = today ?? dateTime.UtcToday;
 
             var items = await db.WorkItems
                 .AsNoTracking()
