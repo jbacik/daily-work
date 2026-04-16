@@ -82,6 +82,32 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
     }
 
     [Fact]
+    public async Task GenerateStandup_RollsYesterdayBackToFriday_WhenTodayIsMonday()
+    {
+        // Arrange
+        _factory.ChatCompletionService.ResponseContent = "ok";
+
+        // Seed a work item in the Monday week so items.Count > 0
+        await _client.PostAsJsonAsync("/api/work-items", new
+        {
+            Title = "Monday item",
+            Category = "SmallThing",
+            Date = "2020-01-20",
+        });
+
+        // Act — today is Monday 2020-01-20, yesterday should roll back to Friday 2020-01-17
+        var response = await _client.PostAsync("/api/standup/generate?weekOf=2020-01-20&today=2020-01-20", null);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var userMessage = _factory.ChatCompletionService.LastChatHistory!
+            .Last(m => m.Role == AuthorRole.User)
+            .Content!;
+        userMessage.ShouldContain("Today's date: 2020-01-20");
+        userMessage.ShouldContain("Yesterday's date: 2020-01-17");
+    }
+
+    [Fact]
     public async Task GenerateStandup_FallsBackToUtc_WhenTodayNotProvided()
     {
         // Arrange

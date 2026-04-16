@@ -77,9 +77,13 @@ internal static class StandupEndpoints
                 return Results.BadRequest("weekOf query parameter is required.");
 
             var todayDate = today ?? dateTime.UtcToday;
-            // Mid-week (Tue-Fri) yesterday is simply today - 1 day.
-            // Monday support is TODO (would need weekend adjustment to Friday).
-            var yesterdayDate = todayDate.AddDays(-1);
+            // Roll "yesterday" back over the weekend so Mon/Sat/Sun all point to Friday.
+            var yesterdayDate = todayDate.DayOfWeek switch
+            {
+                DayOfWeek.Monday => todayDate.AddDays(-3),
+                DayOfWeek.Sunday => todayDate.AddDays(-2),
+                _ => todayDate.AddDays(-1),
+            };
 
             var items = await db.WorkItems
                 .AsNoTracking()
