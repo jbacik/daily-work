@@ -77,6 +77,13 @@ internal static class StandupEndpoints
                 return Results.BadRequest("weekOf query parameter is required.");
 
             var todayDate = today ?? dateTime.UtcToday;
+            // Roll "yesterday" back over the weekend so Mon/Sat/Sun all point to Friday.
+            var yesterdayDate = todayDate.DayOfWeek switch
+            {
+                DayOfWeek.Monday => todayDate.AddDays(-3),
+                DayOfWeek.Sunday => todayDate.AddDays(-2),
+                _ => todayDate.AddDays(-1),
+            };
 
             var items = await db.WorkItems
                 .AsNoTracking()
@@ -134,7 +141,11 @@ internal static class StandupEndpoints
 
             var chatHistory = new ChatHistory();
             chatHistory.AddSystemMessage(systemPrompt);
-            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(workItemsJson, todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), learningQueueJson));
+            chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(
+                workItemsJson,
+                todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                yesterdayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                learningQueueJson));
 
             var response = await chatService.GetChatMessageContentAsync(chatHistory);
 

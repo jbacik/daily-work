@@ -62,13 +62,14 @@ public class StandupPromptTests
     }
 
     [Fact]
-    public void BuildUserMessage_IncludesTodayAndJson()
+    public void BuildUserMessage_IncludesTodayAndYesterdayAndJson()
     {
         var json = """[{"id":1,"title":"Test"}]""";
 
-        var message = StandupPrompts.BuildUserMessage(json, "2026-04-07");
+        var message = StandupPrompts.BuildUserMessage(json, "2026-04-07", "2026-04-06");
 
         message.ShouldContain("Today's date: 2026-04-07");
+        message.ShouldContain("Yesterday's date: 2026-04-06");
         message.ShouldContain(json);
         message.ShouldNotContain("Learning queue");
     }
@@ -79,9 +80,10 @@ public class StandupPromptTests
         var workJson = """[{"id":1,"title":"Test"}]""";
         var learningJson = """[{"title":"Cool experiment","type":"Experiment"}]""";
 
-        var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-10", learningJson);
+        var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-10", "2026-04-09", learningJson);
 
         message.ShouldContain("Today's date: 2026-04-10");
+        message.ShouldContain("Yesterday's date: 2026-04-09");
         message.ShouldContain(workJson);
         message.ShouldContain("Learning queue items consumed this week");
         message.ShouldContain(learningJson);
