@@ -62,6 +62,55 @@ internal static class StandupEndpoints
             return Results.Ok(new { entry.Markdown, Date = entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
         });
 
+        group.MapPost("/generate-weekly-summary", async (
+            AppDbContext db,
+            IChatCompletionService? chatService,
+            string? weekOf) =>
+        {
+            if (chatService is null)
+                return Results.Problem("Azure OpenAI is not configured.", statusCode: 503);
+
+            if (weekOf is null)
+                return Results.BadRequest("weekOf query parameter is required.");
+
+            var weekStart = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture);
+            var weekEnd = weekStart.AddDays(4);
+
+            var dailyComms = await db.UpdateComms
+                .AsNoTracking()
+                .Where(c => c.CommType == CommType.DailyStandup
+                    && c.Date >= weekStart
+                    && c.Date <= weekEnd)
+                .OrderBy(c => c.Date)
+                .Select(c => new { Date = c.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), c.Markdown })
+                .ToListAsync();
+
+            var dailyCommsJson = JsonSerializer.Serialize(dailyComms, JsonOptions);
+
+            var chatHistory = new ChatHistory();
+            chatHistory.AddSystemMessage(WeeklySummaryPrompts.GetSystemPrompt());
+            chatHistory.AddUserMessage(WeeklySummaryPrompts.BuildUserMessage(weekOf, dailyCommsJson));
+
+            var response = await chatService.GetChatMessageContentAsync(chatHistory);
+            var markdown = response.Content ?? string.Empty;
+
+            var existing = await db.UpdateComms.FirstOrDefaultAsync(
+                c => c.Date == weekStart && c.CommType == CommType.WeeklySummary);
+
+            if (existing is not null)
+            {
+                existing.Markdown = markdown;
+            }
+            else
+            {
+                db.UpdateComms.Add(new WeeklySummaryComm { Date = weekStart, Markdown = markdown });
+            }
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { markdown, weekOf });
+        });
+
         group.MapPost("/generate", async (
             AppDbContext db,
             IDateTimeProvider dateTime,
@@ -155,8 +204,12 @@ internal static class StandupEndpoints
         return group;
     }
 
-    private static CommType ResolveCommType(string? commandType) =>
-        string.Equals(commandType, "weekly", StringComparison.OrdinalIgnoreCase)
-            ? CommType.WeeklyUpdate
-            : CommType.DailyStandup;
+    private static CommType ResolveCommType(string? commandType)
+    {
+        if (string.Equals(commandType, "weekly", StringComparison.OrdinalIgnoreCase))
+            return CommType.WeeklyUpdate;
+        if (string.Equals(commandType, "weekly-summary", StringComparison.OrdinalIgnoreCase))
+            return CommType.WeeklySummary;
+        return CommType.DailyStandup;
+    }
 }
