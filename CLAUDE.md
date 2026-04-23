@@ -55,9 +55,11 @@ All conventions live in `.claude/rules/`. Read the relevant file before touching
 1. **Implement** — features typically touch both `api` and `web` in the same branch/PR
 2. **Test** — write API integration tests (xUnit + Testcontainers) and Vue component tests (Vitest) alongside every feature
 3. **Migrate** — when schema changes, add an EF Core migration from `api/src/` and verify `Up()`/`Down()`
-4. **PR** — open a PR; GitHub Copilot will auto-review
-5. **Triage feedback** — use `/pr-feedback` to triage Copilot review comments into Address Now / Backlog / Ignore
-6. **Manual test** — always verify the running Aspire app before merging
+4. **Format** — run `dotnet format api/src` and `dotnet format api/tests`; commit any changes before pushing
+5. **Lint** — run `npm run lint` from `web/`; fix all errors and warnings before pushing
+6. **PR** — open a PR; GitHub Copilot will auto-review
+7. **Triage feedback** — use `/pr-feedback` to triage Copilot review comments into Address Now / Backlog / Ignore
+8. **Manual test** — always verify the running Aspire app before merging
 
 ## Slash Commands
 
