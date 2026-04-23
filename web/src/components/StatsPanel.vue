@@ -2,12 +2,22 @@
 import { computed } from 'vue'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useReadWatchStore } from '@/stores/readWatch'
+import type { WorkItem } from '@/types'
+
+/* eslint-disable vue/require-default-prop */
+const { items: itemsProp, readingQueueCount, itemsLearnedCount } = defineProps<{
+  items?: WorkItem[]
+  readingQueueCount?: number
+  itemsLearnedCount?: number
+}>()
+/* eslint-enable vue/require-default-prop */
 
 const tasks = useDailyTasksStore()
 const readWatch = useReadWatchStore()
 
 const stats = computed(() => {
-  const smallItems = tasks.items.filter((t) => t.category === 'SmallThing')
+  const sourceItems = itemsProp ?? tasks.items
+  const smallItems = sourceItems.filter((t) => t.category === 'SmallThing')
 
   const minSortOrderByDate = new Map<string, number>()
   for (const item of smallItems) {
@@ -28,8 +38,8 @@ const stats = computed(() => {
     oneThingSummary: totalOneThings > 0 ? `${completedOneThings}/${totalOneThings}` : '—',
     smallerThingsSummary: totalSmallerThings > 0 ? `${completedSmallerThings}/${totalSmallerThings}` : '—',
     completionRate: totalOneThings > 0 ? `${Math.round((completedOneThings / totalOneThings) * 100)}%` : '—',
-    readingQueue: readWatch.activeItems.length,
-    itemsLearned: readWatch.completedItems.length,
+    readingQueue: readingQueueCount ?? readWatch.activeItems.length,
+    itemsLearned: itemsLearnedCount ?? readWatch.completedItems.length,
   }
 })
 </script>

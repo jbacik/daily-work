@@ -4,7 +4,7 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useReadWatchStore } from '@/stores/readWatch'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { DAYS, getWeekStart } from '@/utils/week'
+import { DAYS, getWeekStart, formatWeekRange } from '@/utils/week'
 import type { CommandType } from '@/types'
 import BigThing from '@/components/BigThing.vue'
 import DailyTasks from '@/components/DailyTasks.vue'
@@ -16,6 +16,7 @@ import StatsPanel from '@/components/StatsPanel.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
+import PastWeekView from '@/components/PastWeekView.vue'
 
 type ViewMode = 'daily' | 'weekly'
 
@@ -27,6 +28,10 @@ const scratchPad = useScratchPadStore()
 const launchTime = new Date()
 const view = ref<ViewMode>('daily')
 const activeCommand = ref<CommandType | null>(null)
+
+const currentWeekStart = getWeekStart()
+const selectedWeek = ref<string>(currentWeekStart)
+const isPastWeek = computed(() => selectedWeek.value !== currentWeekStart)
 
 const modalTitle = computed(() => {
   switch (activeCommand.value) {
@@ -40,6 +45,10 @@ function handleCommand(type: CommandType) {
   activeCommand.value = type
 }
 
+function handleArchive(weekOf: string) {
+  selectedWeek.value = weekOf
+}
+
 const currentDayLabel = computed((): string => {
   const day = dailyTasks.currentDay
   return day >= 0 && day < 5 ? DAYS[day]! : 'N/A'
@@ -51,14 +60,6 @@ function formatDate(date: Date): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  })
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
   })
 }
 
@@ -92,33 +93,51 @@ onMounted(() => {
               <span class="text-muted-foreground text-sm">v1.0.0</span>
             </h1>
             <p class="text-muted-foreground text-sm mt-1">
-              Weekly task tracker // {{ formatDate(launchTime) }} {{ formatTime(launchTime) }}
+              Weekly task tracker // {{ formatDate(launchTime) }}
             </p>
           </div>
 
           <!-- Navigation Box -->
           <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono w-fit">
             <div>┌────────────────────────────┐</div>
-            <button
-              type="button"
-              class="flex w-full hover:bg-secondary/50 transition-colors"
-              :aria-pressed="view === 'weekly'"
-              @click="view = 'weekly'"
-            >
-              <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
-              <span> Week of: {{ dailyTasks.weekOf }}</span>
-              <span class="ml-auto">│</span>
-            </button>
-            <button
-              type="button"
-              class="flex w-full hover:bg-secondary/50 transition-colors"
-              :aria-pressed="view === 'daily'"
-              @click="view = 'daily'"
-            >
-              <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
-              <span> Day: {{ currentDayLabel }}</span>
-              <span class="ml-auto">│</span>
-            </button>
+            <template v-if="!isPastWeek">
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                :aria-pressed="view === 'weekly'"
+                @click="view = 'weekly'"
+              >
+                <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
+                <span> Week of: {{ dailyTasks.weekOf }}</span>
+                <span class="ml-auto">│</span>
+              </button>
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                :aria-pressed="view === 'daily'"
+                @click="view = 'daily'"
+              >
+                <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
+                <span> Day: {{ currentDayLabel }}</span>
+                <span class="ml-auto">│</span>
+              </button>
+            </template>
+            <template v-else>
+              <div class="flex items-center">
+                <span class="text-accent w-4">~</span>
+                <span> Week of: {{ formatWeekRange(selectedWeek) }}</span>
+                <span class="ml-auto">│</span>
+              </div>
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                @click="selectedWeek = currentWeekStart"
+              >
+                <span class="w-4"> </span>
+                <span class="text-primary"> &larr; back to current</span>
+                <span class="ml-auto">│</span>
+              </button>
+            </template>
             <div>└────────────────────────────┘</div>
           </div>
         </div>
@@ -128,9 +147,9 @@ onMounted(() => {
         </div>
       </header>
 
-      <SlashCommandMenu @command="handleCommand" />
+      <SlashCommandMenu @command="handleCommand" @archive="handleArchive" />
 
-      <BigThing />
+      <BigThing v-if="!isPastWeek" />
 
       <CommandModal
         :is-open="activeCommand !== null && activeCommand !== 'evaluate-my-week'"
@@ -145,8 +164,11 @@ onMounted(() => {
         @close="activeCommand = null"
       />
 
+      <!-- Past Week (read-only) -->
+      <PastWeekView v-if="isPastWeek" :key="selectedWeek" :week-of="selectedWeek" />
+
       <!-- Daily View -->
-      <main v-if="view === 'daily'" class="space-y-6 mt-6">
+      <main v-if="!isPastWeek && view === 'daily'" class="space-y-6 mt-6">
         <DailyTasksCompact />
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ScratchPad />
@@ -155,7 +177,7 @@ onMounted(() => {
       </main>
 
       <!-- Weekly View -->
-      <main v-if="view === 'weekly'" class="space-y-6 mt-6">
+      <main v-if="!isPastWeek && view === 'weekly'" class="space-y-6 mt-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="lg:col-span-2"><WeekOverview /></div>
           <div><StatsPanel /></div>

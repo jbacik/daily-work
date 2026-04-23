@@ -35,3 +35,27 @@ export function getDateForDayIndex(dayIndex: number, weekStart?: string): string
   monday.setDate(monday.getDate() + dayIndex)
   return toLocalDateString(monday)
 }
+
+export function getRecentWeekStarts(count: number): string[] {
+  const result: string[] = []
+  const monday = parseLocalDate(getWeekStart())
+  for (let i = 0; i < count; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() - i * 7)
+    result.push(toLocalDateString(d))
+  }
+  return result
+}
+
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function formatWeekRange(weekStart: string): string {
+  const monday = parseLocalDate(weekStart)
+  const friday = new Date(monday)
+  friday.setDate(monday.getDate() + 4)
+  const mondayLabel = `${SHORT_MONTHS[monday.getMonth()]} ${monday.getDate()}`
+  const fridayLabel = monday.getMonth() === friday.getMonth()
+    ? String(friday.getDate())
+    : `${SHORT_MONTHS[friday.getMonth()]} ${friday.getDate()}`
+  return `${mondayLabel} \u2013 ${fridayLabel}`
+}

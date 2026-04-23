@@ -185,6 +185,44 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 	}
 
 	[Fact]
+	public async Task GenerateWeeklySummary_PersistsAndReturnsMarkdown_WhenDailyCommsExist()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "### Weekly recap\nStrong week overall.";
+
+		var weekOf = "2020-03-09"; // Monday
+		await _client.PostAsJsonAsync("/api/standup", new
+		{
+			Markdown = "Tuesday highlights",
+			Date = "2020-03-10",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate-weekly-summary?weekOf={weekOf}", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		result.GetProperty("markdown").GetString()!.ShouldContain("Strong week");
+
+		// Verify persisted — GET with commandType=weekly-summary
+		var getResponse = await _client.GetAsync($"/api/standup?date={weekOf}&commandType=weekly-summary");
+		getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var getResult = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		getResult.GetProperty("markdown").GetString()!.ShouldContain("Strong week");
+	}
+
+	[Fact]
+	public async Task GenerateWeeklySummary_Returns400_WhenWeekOfMissing()
+	{
+		// Act
+		var response = await _client.PostAsync("/api/standup/generate-weekly-summary", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	public async Task SaveStandup_UpdatesEntry_WhenExisting()
 	{
 		// Arrange
