@@ -52,9 +52,12 @@ internal static class StandupEndpoints
 			}
 			else
 			{
-				entry = type == CommType.WeeklyUpdate
-					? new WeeklyUpdateComm { Date = date, Markdown = dto.Markdown }
-					: new DailyStandupComm { Date = date, Markdown = dto.Markdown };
+				entry = type switch
+				{
+					CommType.WeeklyUpdate => new WeeklyUpdateComm { Date = date, Markdown = dto.Markdown },
+					CommType.WeeklySummary => new WeeklySummaryComm { Date = date, Markdown = dto.Markdown },
+					_ => new DailyStandupComm { Date = date, Markdown = dto.Markdown },
+				};
 				db.UpdateComms.Add(entry);
 			}
 
@@ -73,7 +76,9 @@ internal static class StandupEndpoints
 			if (weekOf is null)
 				return Results.BadRequest("weekOf query parameter is required.");
 
-			var weekStart = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture);
+			if (!DateOnly.TryParse(weekOf, CultureInfo.InvariantCulture, out var weekStart))
+				return Results.BadRequest("weekOf must be a valid date (yyyy-MM-dd).");
+
 			var weekEnd = weekStart.AddDays(4);
 
 			var dailyComms = await db.UpdateComms

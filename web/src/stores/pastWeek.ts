@@ -43,7 +43,9 @@ export const usePastWeekStore = defineStore('pastWeek', () => {
     error.value = null
     try {
       const result = await client.post(
-        `/api/standup/generate-weekly-summary?weekOf=${weekOf.value}`
+        '/api/standup/generate-weekly-summary',
+        null,
+        { params: { weekOf: weekOf.value } }
       ) as any
       summaryMarkdown.value = result?.markdown ?? ''
     } catch (e: any) {

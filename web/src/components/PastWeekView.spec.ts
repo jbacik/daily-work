@@ -162,7 +162,7 @@ describe('PastWeekView', () => {
     await nextTick()
     await nextTick()
 
-    expect(mockPost).toHaveBeenCalledWith(expect.stringContaining('/api/standup/generate-weekly-summary?weekOf=' + WEEK))
+    expect(mockPost).toHaveBeenCalledWith('/api/standup/generate-weekly-summary', null, { params: { weekOf: WEEK } })
     expect(wrapper.find('[data-testid="summary-markdown"]').text()).toContain('Fresh weekly recap.')
 
     wrapper.unmount()
