@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import client from '@/api/client'
+import { getToday } from '@/utils/week'
 import type { CommandType } from '@/types'
 
 const { isOpen, title, commandType = null, weekOf = '' } = defineProps<{
@@ -35,14 +36,6 @@ function sectionsToMarkdown(): string {
     .join('\n\n')
 }
 
-function todayString(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
 async function handleSave() {
   const markdown = sectionsToMarkdown().trim()
   if (!markdown || saveState.value === 'saving') return
@@ -51,7 +44,7 @@ async function handleSave() {
   try {
     await client.post('/api/standup', {
       markdown,
-      date: todayString(),
+      date: getToday(),
       commandType: commandType ?? 'standup',
     })
     hasSaved.value = true
@@ -107,7 +100,7 @@ function stopDotAnimation() {
 
 async function loadSaved(): Promise<boolean> {
   try {
-    const data = await client.get('/api/standup', { params: { date: todayString(), commandType: commandType ?? 'standup' } }) as any
+    const data = await client.get('/api/standup', { params: { date: getToday(), commandType: commandType ?? 'standup' } }) as any
     if (data?.markdown) {
       sections.value = parseMarkdown(data.markdown)
       hasSaved.value = true
@@ -129,7 +122,7 @@ async function generate() {
   startDotAnimation()
 
   try {
-    const params: Record<string, string> = { weekOf }
+    const params: Record<string, string> = { weekOf, today: getToday() }
     if (commandType === 'weekly') params.commandType = 'weekly'
 
     const data = await client.post('/api/standup/generate', null, { params }) as any

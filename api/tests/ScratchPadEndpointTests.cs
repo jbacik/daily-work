@@ -3,135 +3,141 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Tests.Fixtures;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class ScratchPadEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class ScratchPadEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+	private readonly CustomWebApplicationFactory _factory;
+	private readonly HttpClient _client;
+	private static readonly JsonSerializerOptions JsonOptions = new()
+	{
+		PropertyNameCaseInsensitive = true,
+		Converters = { new JsonStringEnumConverter() }
+	};
 
-    private sealed record ScratchPadResponse(int? Id, string? Content, bool? IsActive);
+	private sealed record ScratchPadResponse(int? Id, string? Content, bool? IsActive);
 
-    public ScratchPadEndpointTests(CustomWebApplicationFactory factory)
-    {
-        _client = factory.CreateClient();
-    }
+	public ScratchPadEndpointTests(CustomWebApplicationFactory factory)
+	{
+		_factory = factory;
+		_client = factory.CreateClient();
+	}
 
-    [Fact]
-    public async Task GetScratchPad_ReturnsNullContent_WhenNoActiveRecord()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+	public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+	public Task DisposeAsync() => Task.CompletedTask;
 
-        // Act
-        var response = await _client.GetAsync("/api/scratchpad");
+	[Fact]
+	public async Task GetScratchPad_ReturnsNullContent_WhenNoActiveRecord()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
-        Assert.NotNull(data);
-        Assert.Null(data.Content);
-    }
+		// Act
+		var response = await _client.GetAsync("/api/scratchpad");
 
-    [Fact]
-    public async Task PutScratchPad_CreatesRecord_ReturnsOk()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
+		data.ShouldNotBeNull();
+		data.Content.ShouldBeNull();
+	}
 
-        // Act
-        var response = await _client.PutAsJsonAsync("/api/scratchpad", new { content = "hello" });
+	[Fact]
+	public async Task PutScratchPad_CreatesRecord_ReturnsOk()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
-        Assert.NotNull(data);
-        Assert.Equal("hello", data.Content);
-        Assert.True(data.IsActive);
-    }
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/scratchpad", new { content = "hello" });
 
-    [Fact]
-    public async Task GetScratchPad_ReturnsActiveContent_AfterSave()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
-        await _client.PutAsJsonAsync("/api/scratchpad", new { content = "persistent note" });
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
+		data.ShouldNotBeNull();
+		data.Content.ShouldBe("hello");
+		data.IsActive.ShouldBe(true);
+	}
 
-        // Act
-        var response = await _client.GetAsync("/api/scratchpad");
+	[Fact]
+	public async Task GetScratchPad_ReturnsActiveContent_AfterSave()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		await _client.PutAsJsonAsync("/api/scratchpad", new { content = "persistent note" });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
-        Assert.NotNull(data);
-        Assert.Equal("persistent note", data.Content);
-    }
+		// Act
+		var response = await _client.GetAsync("/api/scratchpad");
 
-    [Fact]
-    public async Task PutScratchPad_UpdatesContent_WhenActiveRecordExists()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
-        await _client.PutAsJsonAsync("/api/scratchpad", new { content = "first" });
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
+		data.ShouldNotBeNull();
+		data.Content.ShouldBe("persistent note");
+	}
 
-        // Act
-        await _client.PutAsJsonAsync("/api/scratchpad", new { content = "second" });
+	[Fact]
+	public async Task PutScratchPad_UpdatesContent_WhenActiveRecordExists()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		await _client.PutAsJsonAsync("/api/scratchpad", new { content = "first" });
 
-        // Assert
-        var response = await _client.GetAsync("/api/scratchpad");
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
-        Assert.NotNull(data);
-        Assert.Equal("second", data.Content);
-    }
+		// Act
+		await _client.PutAsJsonAsync("/api/scratchpad", new { content = "second" });
 
-    [Fact]
-    public async Task PostScratchPadClean_ReturnsNoContent_WhenActiveExists()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
-        await _client.PutAsJsonAsync("/api/scratchpad", new { content = "some notes" });
+		// Assert
+		var response = await _client.GetAsync("/api/scratchpad");
+		response.EnsureSuccessStatusCode();
+		var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
+		data.ShouldNotBeNull();
+		data.Content.ShouldBe("second");
+	}
 
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+	[Fact]
+	public async Task PostScratchPadClean_ReturnsNoContent_WhenActiveExists()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		await _client.PutAsJsonAsync("/api/scratchpad", new { content = "some notes" });
 
-        // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
+		// Act
+		var response = await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
 
-    [Fact]
-    public async Task GetScratchPad_ReturnsNullContent_AfterClean()
-    {
-        // Arrange
-        await _client.PutAsJsonAsync("/api/scratchpad", new { content = "some notes" });
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+	}
 
-        // Act
-        var response = await _client.GetAsync("/api/scratchpad");
+	[Fact]
+	public async Task GetScratchPad_ReturnsNullContent_AfterClean()
+	{
+		// Arrange
+		await _client.PutAsJsonAsync("/api/scratchpad", new { content = "some notes" });
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
-        Assert.NotNull(data);
-        Assert.Null(data.Content);
-    }
+		// Act
+		var response = await _client.GetAsync("/api/scratchpad");
 
-    [Fact]
-    public async Task PostScratchPadClean_ReturnsNoContent_WhenNoActiveRecord()
-    {
-        // Arrange
-        await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var data = await response.Content.ReadFromJsonAsync<ScratchPadResponse>(JsonOptions);
+		data.ShouldNotBeNull();
+		data.Content.ShouldBeNull();
+	}
 
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+	[Fact]
+	public async Task PostScratchPadClean_ReturnsNoContent_WhenNoActiveRecord()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
 
-        // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
+		// Act
+		var response = await _client.PostAsJsonAsync("/api/scratchpad/clean", new { });
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+	}
 }

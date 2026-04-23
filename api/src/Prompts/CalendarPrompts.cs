@@ -2,7 +2,7 @@ namespace DailyWork.Api.Prompts;
 
 internal static class CalendarPrompts
 {
-    internal static string GetSystemPrompt() => """
+	internal static string GetSystemPrompt() => """
         You are a calendar analyst. Given raw Google Calendar event data as JSON, produce a concise weekly evaluation in markdown.
 
         ## Input
@@ -71,6 +71,6 @@ internal static class CalendarPrompts
         - Under 500 words total.
         """;
 
-    internal static string BuildUserMessage(string calendarJson) =>
-        $"Calendar event data:\n\n{calendarJson}";
+	internal static string BuildUserMessage(string calendarJson) =>
+		$"Calendar event data:\n\n{calendarJson}";
 }

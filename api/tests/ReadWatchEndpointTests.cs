@@ -4,404 +4,399 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Entities;
 using DailyWork.Api.Tests.Fixtures;
+using Shouldly;
 using Xunit;
 
 namespace DailyWork.Api.Tests;
 
-public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class ReadWatchEndpointTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
-    private readonly HttpClient _client;
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+	private readonly CustomWebApplicationFactory _factory;
+	private readonly HttpClient _client;
+	private static readonly JsonSerializerOptions JsonOptions = new()
+	{
+		PropertyNameCaseInsensitive = true,
+		Converters = { new JsonStringEnumConverter() }
+	};
 
-    public ReadWatchEndpointTests(CustomWebApplicationFactory factory)
-    {
-        _client = factory.CreateClient();
-    }
+	public ReadWatchEndpointTests(CustomWebApplicationFactory factory)
+	{
+		_factory = factory;
+		_client = factory.CreateClient();
+	}
 
-    [Fact]
-    public async Task PostReadWatch_ParsesUrlFromText_ReturnsCreated()
-    {
-        var response = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "Interesting article https://example.com/article",
-            Type = "Read",
-            Date = "2019-01-01"
-        });
+	public Task InitializeAsync() => _factory.ResetDatabaseAsync();
+	public Task DisposeAsync() => Task.CompletedTask;
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Interesting article", item.Title);
-        Assert.Equal("https://example.com/article", item.Url);
-    }
+	[Fact]
+	public async Task PostReadWatch_ParsesUrlFromText_ReturnsCreated()
+	{
+		var response = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "Interesting article https://example.com/article",
+			Type = "Read",
+			Date = "2019-01-01"
+		});
 
-    [Fact]
-    public async Task PostReadWatch_NoUrl_StoresTitleOnly()
-    {
-        var response = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "Learn about design patterns",
-            Type = "Learn",
-            Date = "2019-01-02"
-        });
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.Title.ShouldBe("Interesting article");
+		item.Url.ShouldBe("https://example.com/article");
+	}
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Learn about design patterns", item.Title);
-        Assert.Equal(string.Empty, item.Url);
-    }
+	[Fact]
+	public async Task PostReadWatch_NoUrl_StoresTitleOnly()
+	{
+		var response = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "Learn about design patterns",
+			Type = "Learn",
+			Date = "2019-01-02"
+		});
 
-    [Fact]
-    public async Task PostReadWatch_UrlOnly_UsesUrlAsTitle()
-    {
-        var response = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "https://example.com/video",
-            Type = "Watch",
-            Date = "2019-01-03"
-        });
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.Title.ShouldBe("Learn about design patterns");
+		item.Url.ShouldBe(string.Empty);
+	}
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("https://example.com/video", item.Title);
-        Assert.Equal("https://example.com/video", item.Url);
-    }
+	[Fact]
+	public async Task PostReadWatch_UrlOnly_UsesUrlAsTitle()
+	{
+		var response = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "https://example.com/video",
+			Type = "Watch",
+			Date = "2019-01-03"
+		});
 
-    [Fact]
-    public async Task PostReadWatch_StoresType_ReturnsInResponse()
-    {
-        var response = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "TypeScript deep dive",
-            Type = "Learn",
-            Date = "2019-01-04"
-        });
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.Title.ShouldBe("https://example.com/video");
+		item.Url.ShouldBe("https://example.com/video");
+	}
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.Equal("Learn", item.Type.ToString());
-    }
+	[Fact]
+	public async Task PostReadWatch_StoresType_ReturnsInResponse()
+	{
+		var response = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "TypeScript deep dive",
+			Type = "Learn",
+			Date = "2019-01-04"
+		});
 
-    [Fact]
-    public async Task GetReadWatch_NoParams_ReturnsAllActiveNotDoneAcrossDates()
-    {
-        // Arrange — create active items on different dates
-        await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "active-date-a-test",
-            Type = "Read",
-            Date = "2019-02-01"
-        });
-        await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "active-date-b-test",
-            Type = "Read",
-            Date = "2019-02-05"
-        });
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.Type.ToString().ShouldBe("Learn");
+	}
 
-        var backlogResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "backlog-cross-date-test",
-            Type = "Read",
-            Date = "2019-02-01"
-        });
-        var backlogItem = await backlogResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        await _client.PutAsJsonAsync($"/api/read-watch/{backlogItem!.Id}", new { IsActive = false });
+	[Fact]
+	public async Task GetReadWatch_NoParams_ReturnsAllActiveNotDoneAcrossDates()
+	{
+		// Arrange — create active items on different dates
+		await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "active-date-a-test",
+			Type = "Read",
+			Date = "2019-02-01"
+		});
+		await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "active-date-b-test",
+			Type = "Read",
+			Date = "2019-02-05"
+		});
 
-        // Act
-        var response = await _client.GetAsync("/api/read-watch");
+		var backlogResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "backlog-cross-date-test",
+			Type = "Read",
+			Date = "2019-02-01"
+		});
+		var backlogItem = await backlogResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		await _client.PutAsJsonAsync($"/api/read-watch/{backlogItem!.Id}", new { IsActive = false });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "active-date-a-test");
-        Assert.Contains(items, i => i.Title == "active-date-b-test");
-        Assert.DoesNotContain(items, i => i.Title == "backlog-cross-date-test");
-    }
+		// Act
+		var response = await _client.GetAsync("/api/read-watch");
 
-    [Fact]
-    public async Task GetReadWatch_ByWeekOf_ReturnsAllNotDoneAndConsumedThatWeek()
-    {
-        var testDate = "2019-03-06"; // Wednesday
-        var testWeekOf = "2019-03-04"; // Monday
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+		items.ShouldNotBeNull();
+		items.ShouldContain(i => i.Title == "active-date-a-test");
+		items.ShouldContain(i => i.Title == "active-date-b-test");
+		items.ShouldNotContain(i => i.Title == "backlog-cross-date-test");
+	}
 
-        // Arrange — create an active item
-        await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "weekof-active-test",
-            Type = "Read",
-            Date = testDate
-        });
+	[Fact]
+	public async Task GetReadWatch_ByWeekOf_ReturnsAllNotDoneAndConsumedThatWeek()
+	{
+		var testDate = "2019-03-06"; // Wednesday
+		var testWeekOf = "2019-03-04"; // Monday
 
-        // Create and consume an item this week
-        var consumeResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "weekof-consumed-test",
-            Type = "Read",
-            Date = testDate
-        });
-        var consumeItem = await consumeResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        await _client.PutAsJsonAsync($"/api/read-watch/{consumeItem!.Id}/consume", new
-        {
-            WorthSharing = true,
-            Notes = "Great stuff",
-            WeekOf = testWeekOf
-        });
+		// Arrange — create an active item
+		await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "weekof-active-test",
+			Type = "Read",
+			Date = testDate
+		});
 
-        // Act
-        var response = await _client.GetAsync($"/api/read-watch?weekOf={testWeekOf}");
+		// Create and consume an item this week
+		var consumeResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "weekof-consumed-test",
+			Type = "Read",
+			Date = testDate
+		});
+		var consumeItem = await consumeResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		await _client.PutAsJsonAsync($"/api/read-watch/{consumeItem!.Id}/consume", new
+		{
+			WorthSharing = true,
+			Notes = "Great stuff",
+			WeekOf = testWeekOf
+		});
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.Contains(items, i => i.Title == "weekof-active-test");
-        Assert.Contains(items, i => i.Title == "weekof-consumed-test");
-    }
+		// Act
+		var response = await _client.GetAsync($"/api/read-watch?weekOf={testWeekOf}");
 
-    [Fact]
-    public async Task GetReadWatch_ByWeekOf_ExcludesConsumedOtherWeeks()
-    {
-        var otherWeekOf = "2019-04-01"; // a different week
-        var queryWeekOf = "2019-05-06"; // the week we query
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+		items.ShouldNotBeNull();
+		items.ShouldContain(i => i.Title == "weekof-active-test");
+		items.ShouldContain(i => i.Title == "weekof-consumed-test");
+	}
 
-        // Arrange — create and consume an item for a different week
-        var resp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "other-week-consumed-test",
-            Type = "Read",
-            Date = "2019-04-02"
-        });
-        var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        await _client.PutAsJsonAsync($"/api/read-watch/{item!.Id}/consume", new
-        {
-            WorthSharing = false,
-            Notes = "Old item",
-            WeekOf = otherWeekOf
-        });
+	[Fact]
+	public async Task GetReadWatch_ByWeekOf_ExcludesConsumedOtherWeeks()
+	{
+		var otherWeekOf = "2019-04-01"; // a different week
+		var queryWeekOf = "2019-05-06"; // the week we query
 
-        // Act
-        var response = await _client.GetAsync($"/api/read-watch?weekOf={queryWeekOf}");
+		// Arrange — create and consume an item for a different week
+		var resp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "other-week-consumed-test",
+			Type = "Read",
+			Date = "2019-04-02"
+		});
+		var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		await _client.PutAsJsonAsync($"/api/read-watch/{item!.Id}/consume", new
+		{
+			WorthSharing = false,
+			Notes = "Old item",
+			WeekOf = otherWeekOf
+		});
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        Assert.NotNull(items);
-        Assert.DoesNotContain(items, i => i.Title == "other-week-consumed-test");
-    }
+		// Act
+		var response = await _client.GetAsync($"/api/read-watch?weekOf={queryWeekOf}");
 
-    [Fact]
-    public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
-    {
-        // Arrange — backlog all existing active items, then fill the global limit
-        var existing = await (await _client.GetAsync("/api/read-watch"))
-            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        foreach (var e in existing!)
-            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var items = await response.Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
+		items.ShouldNotBeNull();
+		items.ShouldNotContain(i => i.Title == "other-week-consumed-test");
+	}
 
-        for (var i = 0; i < 5; i++)
-        {
-            var r = await _client.PostAsJsonAsync("/api/read-watch", new
-            {
-                Text = $"backlog-limit-active-{i}",
-                Type = "Read"
-            });
-            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        }
+	[Fact]
+	public async Task PostReadWatch_WithIsActiveFalse_CreatesBacklogItem()
+	{
+		// Arrange — fill the global active limit
+		for (var i = 0; i < 5; i++)
+		{
+			var r = await _client.PostAsJsonAsync("/api/read-watch", new
+			{
+				Text = $"backlog-limit-active-{i}",
+				Type = "Read"
+			});
+			r.StatusCode.ShouldBe(HttpStatusCode.Created);
+		}
 
-        // Act — add a backlog item directly (should bypass the global limit)
-        var response = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "backlog-direct-create-test",
-            Type = "Read",
-            IsActive = false
-        });
+		// Act — add a backlog item directly (should bypass the global limit)
+		var response = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "backlog-direct-create-test",
+			Type = "Read",
+			IsActive = false
+		});
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(item);
-        Assert.False(item.IsActive);
-        Assert.Equal("backlog-direct-create-test", item.Title);
-    }
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.IsActive.ShouldBeFalse();
+		item.Title.ShouldBe("backlog-direct-create-test");
+	}
 
-    [Fact]
-    public async Task PutReadWatch_SetsIsActiveFalse_BacklogsItem()
-    {
-        // Arrange
-        var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "backlog-toggle-test",
-            Type = "Read",
-            Date = "2019-06-01"
-        });
-        var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+	[Fact]
+	public async Task PutReadWatch_SetsIsActiveFalse_BacklogsItem()
+	{
+		// Arrange
+		var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "backlog-toggle-test",
+			Type = "Read",
+			Date = "2019-06-01"
+		});
+		var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
 
-        // Act
-        var response = await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}", new { IsActive = false });
+		// Act
+		var response = await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}", new { IsActive = false });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(updated);
-        Assert.False(updated.IsActive);
-    }
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		updated.ShouldNotBeNull();
+		updated.IsActive.ShouldBeFalse();
+	}
 
-    [Fact]
-    public async Task PutReadWatch_SetsIsActiveTrue_RestoresFromBacklog()
-    {
-        // Arrange
-        var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "restore-toggle-test",
-            Type = "Read",
-            Date = "2019-07-01"
-        });
-        var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}", new { IsActive = false });
+	[Fact]
+	public async Task PutReadWatch_SetsIsActiveTrue_RestoresFromBacklog()
+	{
+		// Arrange
+		var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "restore-toggle-test",
+			Type = "Read",
+			Date = "2019-07-01"
+		});
+		var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}", new { IsActive = false });
 
-        // Act
-        var response = await _client.PutAsJsonAsync($"/api/read-watch/{created.Id}", new { IsActive = true });
+		// Act
+		var response = await _client.PutAsJsonAsync($"/api/read-watch/{created.Id}", new { IsActive = true });
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(updated);
-        Assert.True(updated.IsActive);
-    }
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var updated = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		updated.ShouldNotBeNull();
+		updated.IsActive.ShouldBeTrue();
+	}
 
-    [Fact]
-    public async Task PutConsumeReadWatch_SetsAllFields()
-    {
-        var testWeekOf = "2019-08-05";
+	[Fact]
+	public async Task PutConsumeReadWatch_SetsAllFields()
+	{
+		var testWeekOf = "2019-08-05";
 
-        // Arrange
-        var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "consume-fields-test",
-            Type = "Read",
-            Date = "2019-08-07"
-        });
-        var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		// Arrange
+		var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "consume-fields-test",
+			Type = "Read",
+			Date = "2019-08-07"
+		});
+		var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
 
-        // Act
-        var response = await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}/consume", new
-        {
-            WorthSharing = true,
-            Notes = "Very insightful article",
-            WeekOf = testWeekOf
-        });
+		// Act
+		var response = await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}/consume", new
+		{
+			WorthSharing = true,
+			Notes = "Very insightful article",
+			WeekOf = testWeekOf
+		});
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var consumed = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(consumed);
-        Assert.True(consumed.IsDone);
-        Assert.False(consumed.IsActive);
-        Assert.True(consumed.WorthSharing);
-        Assert.Equal("Very insightful article", consumed.Notes);
-        Assert.Equal(testWeekOf, consumed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
-    }
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var consumed = await response.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		consumed.ShouldNotBeNull();
+		consumed.IsDone.ShouldBeTrue();
+		consumed.IsActive.ShouldBeFalse();
+		consumed.WorthSharing.ShouldBe(true);
+		consumed.Notes.ShouldBe("Very insightful article");
+		consumed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ShouldBe(testWeekOf);
+	}
 
-    [Fact]
-    public async Task PutConsumeReadWatch_ReturnsNotFound_WhenMissing()
-    {
-        var response = await _client.PutAsJsonAsync("/api/read-watch/99999/consume", new
-        {
-            WorthSharing = false,
-            Notes = "N/A",
-            WeekOf = "2019-09-02"
-        });
+	[Fact]
+	public async Task PutConsumeReadWatch_ReturnsNotFound_WhenMissing()
+	{
+		var response = await _client.PutAsJsonAsync("/api/read-watch/99999/consume", new
+		{
+			WorthSharing = false,
+			Notes = "N/A",
+			WeekOf = "2019-09-02"
+		});
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
+		response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
 
-    [Fact]
-    public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
-    {
-        // Arrange — backlog all existing active items so the global count starts at 0
-        var existing = await (await _client.GetAsync("/api/read-watch"))
-            .Content.ReadFromJsonAsync<List<ReadWatchItem>>(JsonOptions);
-        foreach (var e in existing!)
-            await _client.PutAsJsonAsync($"/api/read-watch/{e.Id}", new { IsActive = false });
+	[Fact]
+	public async Task PostReadWatch_EnforcesLimit_IgnoringBacklogItems()
+	{
+		// Arrange — create 5 active items
+		var createdIds = new List<int>();
+		for (var i = 0; i < 5; i++)
+		{
+			var resp = await _client.PostAsJsonAsync("/api/read-watch", new
+			{
+				Text = $"limit-test-item-{i}",
+				Type = "Read"
+			});
+			resp.StatusCode.ShouldBe(HttpStatusCode.Created);
+			var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+			createdIds.Add(item!.Id);
+		}
 
-        // Create 5 active items
-        var createdIds = new List<int>();
-        for (var i = 0; i < 5; i++)
-        {
-            var resp = await _client.PostAsJsonAsync("/api/read-watch", new
-            {
-                Text = $"limit-test-item-{i}",
-                Type = "Read"
-            });
-            Assert.Equal(HttpStatusCode.Created, resp.StatusCode);
-            var item = await resp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-            createdIds.Add(item!.Id);
-        }
+		// 6th active item should be rejected
+		var rejectedResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "limit-test-sixth-item",
+			Type = "Read"
+		});
+		rejectedResp.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
-        // 6th active item should be rejected
-        var rejectedResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "limit-test-sixth-item",
-            Type = "Read"
-        });
-        Assert.Equal(HttpStatusCode.BadRequest, rejectedResp.StatusCode);
+		// Backlog one — active count drops to 4, next add should succeed
+		await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
 
-        // Backlog one — active count drops to 4, next add should succeed
-        await _client.PutAsJsonAsync($"/api/read-watch/{createdIds[0]}", new { IsActive = false });
+		var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "limit-test-sixth-after-backlog",
+			Type = "Read"
+		});
+		sixthResp.StatusCode.ShouldBe(HttpStatusCode.Created);
+	}
 
-        var sixthResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "limit-test-sixth-after-backlog",
-            Type = "Read"
-        });
-        Assert.Equal(HttpStatusCode.Created, sixthResp.StatusCode);
-    }
+	[Fact]
+	public async Task PutConsumeReadWatch_PreservesWeekConsumed_WhenReconsumed()
+	{
+		var originalWeekOf = "2019-10-07";
+		var newWeekOf = "2019-10-14";
 
-    [Fact]
-    public async Task PutConsumeReadWatch_PreservesWeekConsumed_WhenReconsumed()
-    {
-        var originalWeekOf = "2019-10-07";
-        var newWeekOf = "2019-10-14";
+		// Arrange — create and consume an item in week A
+		var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
+		{
+			Text = "preserve-week-consumed-test",
+			Type = "Read",
+			Date = "2019-10-09"
+		});
+		var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
 
-        // Arrange — create and consume an item in week A
-        var createResp = await _client.PostAsJsonAsync("/api/read-watch", new
-        {
-            Text = "preserve-week-consumed-test",
-            Type = "Read",
-            Date = "2019-10-09"
-        });
-        var created = await createResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}/consume", new
+		{
+			WorthSharing = true,
+			Notes = "Original notes",
+			WeekOf = originalWeekOf
+		});
 
-        await _client.PutAsJsonAsync($"/api/read-watch/{created!.Id}/consume", new
-        {
-            WorthSharing = true,
-            Notes = "Original notes",
-            WeekOf = originalWeekOf
-        });
+		// Act — consume again with a different week (simulating a review save)
+		var reviewResp = await _client.PutAsJsonAsync($"/api/read-watch/{created.Id}/consume", new
+		{
+			WorthSharing = false,
+			Notes = "Updated notes",
+			WeekOf = newWeekOf
+		});
 
-        // Act — consume again with a different week (simulating a review save)
-        var reviewResp = await _client.PutAsJsonAsync($"/api/read-watch/{created.Id}/consume", new
-        {
-            WorthSharing = false,
-            Notes = "Updated notes",
-            WeekOf = newWeekOf
-        });
-
-        // Assert — WeekConsumed must still reflect the original week
-        reviewResp.EnsureSuccessStatusCode();
-        var reviewed = await reviewResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
-        Assert.NotNull(reviewed);
-        Assert.Equal(originalWeekOf, reviewed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
-        Assert.Equal("Updated notes", reviewed.Notes);
-        Assert.False(reviewed.WorthSharing);
-    }
+		// Assert — WeekConsumed must still reflect the original week
+		reviewResp.EnsureSuccessStatusCode();
+		var reviewed = await reviewResp.Content.ReadFromJsonAsync<ReadWatchItem>(JsonOptions);
+		reviewed.ShouldNotBeNull();
+		reviewed.WeekConsumed?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ShouldBe(originalWeekOf);
+		reviewed.Notes.ShouldBe("Updated notes");
+		reviewed.WorthSharing.ShouldBe(false);
+	}
 }

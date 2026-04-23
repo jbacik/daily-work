@@ -1,11 +1,11 @@
-@host = http://localhost:5062
+@host = http://localhost:5224
 
 ### Generate standup (mid-week, current week)
-POST {{host}}/api/standup/generate?weekOf=2026-04-06
+POST {{host}}/api/standup/generate?weekOf=2026-04-06&today=2026-04-08
 Content-Type: application/json
 
 ### Generate standup (weekly summary)
-POST {{host}}/api/standup/generate?weekOf=2026-04-06&commandType=weekly
+POST {{host}}/api/standup/generate?weekOf=2026-04-06&commandType=weekly&today=2026-04-10
 Content-Type: application/json
 
 ### Generate standup (no items — expects 400)

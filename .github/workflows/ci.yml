@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          dotnet-quality: preview
+
+      - name: Restore
+        run: dotnet restore daily-work.slnx
+
+      - name: Verify formatting
+        run: dotnet format daily-work.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build daily-work.slnx --no-restore -c Release
+
+      - name: Test
+        run: >
+          dotnet test api/tests/DailyWork.Api.Tests.csproj
+          --no-build
+          --no-restore
+          -c Release
+          --logger "trx"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results
+          path: TestResults/**/*.trx
+          retention-days: 7
+
+  frontend:
+    name: Frontend (Vue)
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test -- --run

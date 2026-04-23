@@ -2,22 +2,22 @@ namespace DailyWork.Api.Prompts;
 
 internal static class StandupPrompts
 {
-    internal static string GetSystemPrompt(DayOfWeek day) => day switch
-    {
-        DayOfWeek.Monday => GetMondayPrompt(),
-        DayOfWeek.Friday => GetFridayPrompt(),
-        _ => GetMidWeekPrompt(),
-    };
+	internal static string GetSystemPrompt(DayOfWeek day) => day switch
+	{
+		DayOfWeek.Monday => GetMondayPrompt(),
+		DayOfWeek.Friday => GetFridayPrompt(),
+		_ => GetMidWeekPrompt(),
+	};
 
-    internal static string BuildUserMessage(string workItemsJson, string today, string? learningQueueJson = null)
-    {
-        var message = $"Today's date: {today}\n\nWork items:\n{workItemsJson}";
-        if (learningQueueJson is not null)
-            message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
-        return message;
-    }
+	internal static string BuildUserMessage(string workItemsJson, string today, string yesterday, string? learningQueueJson = null)
+	{
+		var message = $"Today's date: {today}\nYesterday's date: {yesterday}\n\nWork items:\n{workItemsJson}";
+		if (learningQueueJson is not null)
+			message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
+		return message;
+	}
 
-    private static string GetMidWeekPrompt() => """
+	private static string GetMidWeekPrompt() => """
         You are a standup response writer. Answer exactly 3 standup questions using the provided work items.
         Do NOT add summaries, tables, counts, or extra sections beyond the 3 answers.
 
@@ -34,13 +34,13 @@ internal static class StandupPrompts
 
         Smaller stuff: knocked out **Weekly Kickoff Prep**, carried **Graham CRM+ discussion** and **Submit AI Qualifying Race**.
 
-        The first line addresses ONLY yesterday's big thing of the day (the first SmallThing by sortOrder for yesterday's date). Lead with an opener that varies based on whether THAT specific item was done:
+        The first line addresses ONLY yesterday's big thing of the day — the first SmallThing (by sortOrder) whose `date` EXACTLY matches the "Yesterday's date" line provided in the user message. Do NOT infer yesterday from today's date; use the value given. Lead with an opener that varies based on whether THAT specific item was done:
         - DONE: enthusiastic — pick one: "Hell yea!", "YESSIR!", "You know it!", "YES!", "Crushed it.", "Nailed it.", "Lock it in.", "Big day yesterday.", "Clean sweep.", "All green, baby."
         - NOT DONE: self-deprecating — pick one: "NOPE.", "That's funny.", "Not even close.", "What was I thinking?", "Lol no.", "About that...", "Let's not talk about it.", "Swing and a miss.", "Bold of you to ask.", "Yeah... no."
         - PARTIAL CREDIT (e.g. in progress): hedging — pick one: "Kinda.", "Sort of.", "Getting there.", "Halfway hero.", "Progress, not perfection."
         Pick a different one each time — never repeat the same opener twice in a row.
 
-        Then a BLANK LINE, then a "Smaller stuff:" line summarizing yesterday's other SmallThings (done/carried).
+        Then a BLANK LINE, then a "Smaller stuff:" line summarizing the other SmallThings whose `date` matches the provided yesterday's date (done/carried).
 
         ### What's the One Thing you will complete today in service of the weekly goal?
         **Start Insights work — examine PDL payload/data store**, feeding the weekly goal of **Data Products support**.
@@ -61,9 +61,9 @@ internal static class StandupPrompts
         - Under 140 words total.
         """;
 
-    private static string GetMondayPrompt() => "Monday prompt — TODO";
+	private static string GetMondayPrompt() => "Monday prompt — TODO";
 
-    private static string GetFridayPrompt() => """
+	private static string GetFridayPrompt() => """
         You are a standup response writer. Answer exactly 4 standup questions using the provided work items and learning queue data.
         Do NOT add summaries, tables, counts, or extra sections beyond the 4 answers.
 
@@ -87,13 +87,13 @@ internal static class StandupPrompts
 
         Smaller stuff: knocked out **Weekly Kickoff Prep**, carried **Graham CRM+ discussion** and **Submit AI Qualifying Race**.
 
-        The first line addresses ONLY yesterday's big thing of the day (the first SmallThing by sortOrder for yesterday's date). Lead with an opener that varies based on whether THAT specific item was done:
+        The first line addresses ONLY yesterday's big thing of the day — the first SmallThing (by sortOrder) whose `date` EXACTLY matches the "Yesterday's date" line provided in the user message. Do NOT infer yesterday from today's date; use the value given. Lead with an opener that varies based on whether THAT specific item was done:
         - DONE: enthusiastic — pick one: "Hell yea!", "YESSIR!", "You know it!", "YES!", "Crushed it.", "Nailed it.", "Lock it in.", "Big day yesterday.", "Clean sweep.", "All green, baby."
         - NOT DONE: self-deprecating — pick one: "NOPE.", "That's funny.", "Not even close.", "What was I thinking?", "Lol no.", "About that...", "Let's not talk about it.", "Swing and a miss.", "Bold of you to ask.", "Yeah... no."
         - PARTIAL CREDIT (e.g. in progress): hedging — pick one: "Kinda.", "Sort of.", "Getting there.", "Halfway hero.", "Progress, not perfection."
         Pick a different one each time — never repeat the same opener twice in a row.
 
-        Then a BLANK LINE, then a "Smaller stuff:" line summarizing yesterday's other SmallThings (done/carried).
+        Then a BLANK LINE, then a "Smaller stuff:" line summarizing the other SmallThings whose `date` matches the provided yesterday's date (done/carried).
 
         ### What's the One Thing you will complete today in service of the weekly goal?
         **Start Insights work — examine PDL payload/data store**, feeding the weekly goal of **Data Products support**.

@@ -2,7 +2,7 @@ namespace DailyWork.Api.Enums;
 
 internal enum CommType
 {
-    DailyStandup = 1,
-    WeeklyUpdate = 2,
-    WeeklySummary = 3,
+	DailyStandup = 1,
+	WeeklyUpdate = 2,
+	WeeklySummary = 3,
 }
