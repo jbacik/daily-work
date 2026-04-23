@@ -4,7 +4,7 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useReadWatchStore } from '@/stores/readWatch'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useScratchPadStore } from '@/stores/scratchPad'
-import { DAYS, getWeekStart, getRecentWeekStarts, formatWeekRange } from '@/utils/week'
+import { DAYS, getWeekStart, formatWeekRange } from '@/utils/week'
 import type { CommandType } from '@/types'
 import BigThing from '@/components/BigThing.vue'
 import DailyTasks from '@/components/DailyTasks.vue'
@@ -30,7 +30,6 @@ const view = ref<ViewMode>('daily')
 const activeCommand = ref<CommandType | null>(null)
 
 const currentWeekStart = getWeekStart()
-const recentWeeks = getRecentWeekStarts(5)
 const selectedWeek = ref<string>(currentWeekStart)
 const isPastWeek = computed(() => selectedWeek.value !== currentWeekStart)
 
@@ -44,6 +43,10 @@ const modalTitle = computed(() => {
 
 function handleCommand(type: CommandType) {
   activeCommand.value = type
+}
+
+function handleArchive(weekOf: string) {
+  selectedWeek.value = weekOf
 }
 
 const currentDayLabel = computed((): string => {
@@ -97,47 +100,44 @@ onMounted(() => {
           <!-- Navigation Box -->
           <div class="text-xs text-muted-foreground border border-border p-2 bg-card font-mono w-fit">
             <div>┌────────────────────────────┐</div>
-            <div class="flex items-center">
-              <span class="text-accent w-4">~</span>
-              <span> Week of:&nbsp;</span>
-              <select
-                v-model="selectedWeek"
-                data-testid="week-dropdown"
-                class="bg-transparent text-foreground border-none outline-none cursor-pointer"
+            <template v-if="!isPastWeek">
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                :aria-pressed="view === 'weekly'"
+                @click="view = 'weekly'"
               >
-                <option
-                  v-for="(w, i) in recentWeeks"
-                  :key="w"
-                  :value="w"
-                  class="bg-card text-foreground"
-                >
-                  {{ formatWeekRange(w) }}{{ i === 0 ? ' (current)' : '' }}
-                </option>
-              </select>
-              <span class="ml-auto">│</span>
-            </div>
-            <button
-              v-if="!isPastWeek"
-              type="button"
-              class="flex w-full hover:bg-secondary/50 transition-colors"
-              :aria-pressed="view === 'weekly'"
-              @click="view = 'weekly'"
-            >
-              <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
-              <span> View: Weekly</span>
-              <span class="ml-auto">│</span>
-            </button>
-            <button
-              v-if="!isPastWeek"
-              type="button"
-              class="flex w-full hover:bg-secondary/50 transition-colors"
-              :aria-pressed="view === 'daily'"
-              @click="view = 'daily'"
-            >
-              <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
-              <span> Day: {{ currentDayLabel }}</span>
-              <span class="ml-auto">│</span>
-            </button>
+                <span class="text-accent w-4">{{ view === 'weekly' ? '~' : ' ' }}</span>
+                <span> Week of: {{ dailyTasks.weekOf }}</span>
+                <span class="ml-auto">│</span>
+              </button>
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                :aria-pressed="view === 'daily'"
+                @click="view = 'daily'"
+              >
+                <span class="text-accent w-4">{{ view === 'daily' ? '~' : ' ' }}</span>
+                <span> Day: {{ currentDayLabel }}</span>
+                <span class="ml-auto">│</span>
+              </button>
+            </template>
+            <template v-else>
+              <div class="flex items-center">
+                <span class="text-accent w-4">~</span>
+                <span> Week of: {{ formatWeekRange(selectedWeek) }}</span>
+                <span class="ml-auto">│</span>
+              </div>
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                @click="selectedWeek = currentWeekStart"
+              >
+                <span class="w-4"> </span>
+                <span class="text-primary"> &larr; back to current</span>
+                <span class="ml-auto">│</span>
+              </button>
+            </template>
             <div>└────────────────────────────┘</div>
           </div>
         </div>
@@ -147,7 +147,7 @@ onMounted(() => {
         </div>
       </header>
 
-      <SlashCommandMenu v-if="!isPastWeek" @command="handleCommand" />
+      <SlashCommandMenu @command="handleCommand" @archive="handleArchive" />
 
       <BigThing v-if="!isPastWeek" />
 
