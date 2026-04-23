@@ -2,22 +2,22 @@ namespace DailyWork.Api.Prompts;
 
 internal static class StandupPrompts
 {
-    internal static string GetSystemPrompt(DayOfWeek day) => day switch
-    {
-        DayOfWeek.Monday => GetMondayPrompt(),
-        DayOfWeek.Friday => GetFridayPrompt(),
-        _ => GetMidWeekPrompt(),
-    };
+	internal static string GetSystemPrompt(DayOfWeek day) => day switch
+	{
+		DayOfWeek.Monday => GetMondayPrompt(),
+		DayOfWeek.Friday => GetFridayPrompt(),
+		_ => GetMidWeekPrompt(),
+	};
 
-    internal static string BuildUserMessage(string workItemsJson, string today, string yesterday, string? learningQueueJson = null)
-    {
-        var message = $"Today's date: {today}\nYesterday's date: {yesterday}\n\nWork items:\n{workItemsJson}";
-        if (learningQueueJson is not null)
-            message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
-        return message;
-    }
+	internal static string BuildUserMessage(string workItemsJson, string today, string yesterday, string? learningQueueJson = null)
+	{
+		var message = $"Today's date: {today}\nYesterday's date: {yesterday}\n\nWork items:\n{workItemsJson}";
+		if (learningQueueJson is not null)
+			message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
+		return message;
+	}
 
-    private static string GetMidWeekPrompt() => """
+	private static string GetMidWeekPrompt() => """
         You are a standup response writer. Answer exactly 3 standup questions using the provided work items.
         Do NOT add summaries, tables, counts, or extra sections beyond the 3 answers.
 
@@ -61,9 +61,9 @@ internal static class StandupPrompts
         - Under 140 words total.
         """;
 
-    private static string GetMondayPrompt() => "Monday prompt — TODO";
+	private static string GetMondayPrompt() => "Monday prompt — TODO";
 
-    private static string GetFridayPrompt() => """
+	private static string GetFridayPrompt() => """
         You are a standup response writer. Answer exactly 4 standup questions using the provided work items and learning queue data.
         Do NOT add summaries, tables, counts, or extra sections beyond the 4 answers.
 

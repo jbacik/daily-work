@@ -2,11 +2,11 @@ namespace DailyWork.Api;
 
 internal interface IDateTimeProvider
 {
-    DateTime UtcNow { get; }
-    DateOnly UtcToday => DateOnly.FromDateTime(UtcNow);
+	DateTime UtcNow { get; }
+	DateOnly UtcToday => DateOnly.FromDateTime(UtcNow);
 }
 
 internal sealed class SystemDateTimeProvider : IDateTimeProvider
 {
-    public DateTime UtcNow => DateTime.UtcNow;
+	public DateTime UtcNow => DateTime.UtcNow;
 }

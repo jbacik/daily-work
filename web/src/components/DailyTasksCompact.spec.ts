@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { ref, computed, nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import DailyTasksCompact from './DailyTasksCompact.vue'
 import type { WorkItem } from '@/types'
 
