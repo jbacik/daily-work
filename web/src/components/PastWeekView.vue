@@ -173,7 +173,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
         v-if="store.summaryMarkdown"
         class="text-sm text-foreground whitespace-pre-wrap"
         data-testid="summary-markdown"
-      >{{ store.summaryMarkdown }}</div>
+      >
+        {{ store.summaryMarkdown }}
+      </div>
       <div
         v-else-if="store.isGenerating"
         class="text-sm text-muted-foreground"

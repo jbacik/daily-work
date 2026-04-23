@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { CommandType } from '@/types'
-import { getRecentWeekStarts, formatWeekRange, getWeekStart } from '@/utils/week'
+import { getRecentWeekStarts, formatWeekRange } from '@/utils/week'
 
 const emit = defineEmits<{
   command: [type: CommandType]
@@ -12,7 +12,6 @@ const isOpen = ref(false)
 const archiveOpen = ref(false)
 const panelRef = ref<HTMLDivElement | null>(null)
 
-const currentWeekStart = getWeekStart()
 const recentWeeks = getRecentWeekStarts(5)
 
 function weekLabel(index: number): string {

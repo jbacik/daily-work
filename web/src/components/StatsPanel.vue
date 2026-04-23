@@ -5,9 +5,9 @@ import { useReadWatchStore } from '@/stores/readWatch'
 import type { WorkItem } from '@/types'
 
 const {
-  items: itemsProp,
-  readingQueueCount,
-  itemsLearnedCount,
+  items: itemsProp = [],
+  readingQueueCount = 0,
+  itemsLearnedCount = 0,
 } = defineProps<{
   items?: WorkItem[]
   readingQueueCount?: number
