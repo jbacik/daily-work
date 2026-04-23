@@ -2,7 +2,7 @@ namespace DailyWork.Api.Prompts;
 
 internal static class WeeklySummaryPrompts
 {
-    internal static string GetSystemPrompt() => """
+	internal static string GetSystemPrompt() => """
         You are writing a concise, optimistic recap of the user's work week.
         You will be given the user's saved daily standup comms for the week (Monday through Friday).
         These already summarize what was done each day — your job is to synthesize them into ONE short weekly recap.
@@ -24,6 +24,6 @@ internal static class WeeklySummaryPrompts
         - If the daily comms are sparse or empty, say so briefly and stay positive.
         """;
 
-    internal static string BuildUserMessage(string weekOf, string dailyCommsJson) =>
-        $"Week of: {weekOf}\n\nDaily standup comms for the week:\n{dailyCommsJson}";
+	internal static string BuildUserMessage(string weekOf, string dailyCommsJson) =>
+		$"Week of: {weekOf}\n\nDaily standup comms for the week:\n{dailyCommsJson}";
 }
