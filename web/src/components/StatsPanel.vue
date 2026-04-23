@@ -4,15 +4,13 @@ import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useReadWatchStore } from '@/stores/readWatch'
 import type { WorkItem } from '@/types'
 
-const {
-  items: itemsProp = [],
-  readingQueueCount = 0,
-  itemsLearnedCount = 0,
-} = defineProps<{
+/* eslint-disable vue/require-default-prop */
+const { items: itemsProp, readingQueueCount, itemsLearnedCount } = defineProps<{
   items?: WorkItem[]
   readingQueueCount?: number
   itemsLearnedCount?: number
 }>()
+/* eslint-enable vue/require-default-prop */
 
 const tasks = useDailyTasksStore()
 const readWatch = useReadWatchStore()
