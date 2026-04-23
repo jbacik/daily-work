@@ -38,7 +38,7 @@ function cancelAdd() {
 }
 
 async function handleAddItem() {
-  var text = newText.value.trim()
+  const text = newText.value.trim()
   if (!text) return
   await store.create(text, newType.value)
   newText.value = ''
@@ -56,7 +56,7 @@ function cancelAddBacklog() {
 }
 
 async function handleAddBacklogItem() {
-  var text = newBacklogText.value.trim()
+  const text = newBacklogText.value.trim()
   if (!text) return
   await store.create(text, newBacklogType.value, false)
   newBacklogText.value = ''
@@ -64,7 +64,7 @@ async function handleAddBacklogItem() {
 }
 
 function handleConsume(id: number) {
-  var item = store.items.find((i) => i.id === id)
+  const item = store.items.find((i) => i.id === id)
   if (!item) return
   modalItem.value = item
   modalMode.value = 'consume'
@@ -72,7 +72,7 @@ function handleConsume(id: number) {
 }
 
 function handleReview(id: number) {
-  var item = store.items.find((i) => i.id === id)
+  const item = store.items.find((i) => i.id === id)
   if (!item) return
   modalItem.value = item
   modalMode.value = 'review'
