@@ -121,6 +121,17 @@ Log levels: `Information` for successful mutations, `Warning` for business rule 
 - Use `[]` collection expression syntax (C# 12+) where applicable
 - Use `var` for locals where the type is obvious from the right side
 
+## Formatting
+
+All formatting is enforced by `.editorconfig` and `dotnet format`. Follow these or the pre-push hook will block:
+
+- **Indentation**: tabs (width 4) for `.cs` — never spaces
+- **Namespaces**: file-scoped (`namespace Foo;`)
+- **Braces**: single-line early exits without braces are OK (`when_multiline`); open braces always on a new line
+- **`using` directives**: system namespaces sorted first
+
+Run `dotnet format api/src` and `dotnet format api/tests` after making C# changes and commit the result before pushing.
+
 ## Keep It Simple
 
 This is an intentionally minimal dev tool. No FluentValidation, no auth middleware, no output caching, no Options pattern. Business rule validation (e.g., max 5 items/day) is inline in the endpoint handler:
