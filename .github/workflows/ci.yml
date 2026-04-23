@@ -55,6 +55,8 @@ jobs:
   frontend:
     name: Frontend (Vue)
     runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York
     defaults:
       run:
         working-directory: web
