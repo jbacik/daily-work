@@ -25,4 +25,5 @@ dist/
 # Prototypes and Ephemeral Assets
 prototypes/
 /.claude/settings.local.json
+/.claude/worktrees/
 prev-context/
