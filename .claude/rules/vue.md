@@ -79,6 +79,28 @@ Never use `bg-white`, `text-black`, `text-gray-*`, or hardcoded hex/rgb colors.
 
 **Exception:** Component-local constant maps (like `TYPE_STYLES` in `ReadWatchItem.vue`) may use Tailwind color classes for label badge coloring.
 
+## Linting
+
+ESLint runs with `--max-warnings 0` — warnings are treated as errors. A pre-push hook blocks if lint fails. Keep these rules in mind:
+
+- **No unused variables** — `@typescript-eslint/no-unused-vars` is an error; remove or use every declared variable
+- **Multiline element content** — `vue/multiline-html-element-content-newline` is active: if a `<div>` (or block element) spans multiple lines of attributes, its content must be on its own line:
+  ```html
+  <!-- CORRECT -->
+  <div class="...">
+    {{ value }}
+  </div>
+
+  <!-- WRONG — content on same line as closing > -->
+  <div class="...">{{ value }}</div>
+  ```
+- **Optional prop defaults** — `vue/require-default-prop` is active; always provide defaults for optional props via reactive destructure:
+  ```ts
+  const { count = 0, items = [] } = defineProps<{ count?: number; items?: Foo[] }>()
+  ```
+
+Turned **off** in this project (don't add them back): `no-explicit-any`, `no-v-html`, `max-attributes-per-line`, `singleline-html-element-content-newline`, `html-self-closing`, `multi-word-component-names`, `html-indent`, `html-closing-bracket-newline`, `first-attribute-linebreak`.
+
 ## CLI Aesthetic
 
 The app has a terminal/CLI aesthetic — maintain it in new UI:
