@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Tests.Fixtures;
+using Microsoft.SemanticKernel.ChatCompletion;
 using Shouldly;
 using Xunit;
 
@@ -44,8 +45,8 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 			Date = "2020-01-15",
 		});
 
-		// Act
-		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}", null);
+		// Act — pass today explicitly (client's local date)
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
 
 		// Assert
 		response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -53,6 +54,79 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		var markdown = result.GetProperty("markdown").GetString();
 		markdown.ShouldNotBeNull();
 		markdown.ShouldContain("Crushed it");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_IncludesYesterdayDateInPrompt_WhenGenerating()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Yesterday test item",
+			Category = "SmallThing",
+			Date = "2020-01-14",
+		});
+
+		// Act — today is Wednesday 2020-01-15, so yesterday should be 2020-01-14
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("Today's date: 2020-01-15");
+		userMessage.ShouldContain("Yesterday's date: 2020-01-14");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_RollsYesterdayBackToFriday_WhenTodayIsMonday()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		// Seed a work item in the Monday week so items.Count > 0
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Monday item",
+			Category = "SmallThing",
+			Date = "2020-01-20",
+		});
+
+		// Act — today is Monday 2020-01-20, yesterday should roll back to Friday 2020-01-17
+		var response = await _client.PostAsync("/api/standup/generate?weekOf=2020-01-20&today=2020-01-20", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("Today's date: 2020-01-20");
+		userMessage.ShouldContain("Yesterday's date: 2020-01-17");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_FallsBackToUtc_WhenTodayNotProvided()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "Fallback test";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Fallback item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act — omit today param
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}", null);
+
+		// Assert — should still succeed using UtcToday fallback
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		result.GetProperty("markdown").GetString().ShouldNotBeNull();
 	}
 
 	[Fact]
