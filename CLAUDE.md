@@ -39,6 +39,10 @@ aspire/           # .NET Aspire AppHost and ServiceDefaults
 .claude/rules/    # Coding conventions (read these before making changes)
 ```
 
+## Ubiquitous Language
+
+`Ubiquitous_Language.md` at the project root defines the canonical vocabulary for this codebase — domain terms, technical conventions, and naming patterns. Read it before planning or implementing any feature. Use `/ubiquitous-language` to add new terms as they emerge.
+
 ## Coding Conventions
 
 All conventions live in `.claude/rules/`. Read the relevant file before touching that layer:
@@ -63,6 +67,11 @@ All conventions live in `.claude/rules/`. Read the relevant file before touching
 
 ## Slash Commands
 
+- `/grill-me` — Socratic design interview before implementation; surfaces assumptions and gaps
+- `/write-a-prd` — synthesize design decisions into a structured PRD, submitted as a GitHub issue
+- `/test-plan` — enumerate all xUnit + Vitest test cases before writing any test code
+- `/migration-review` — verify a scaffolded EF Core migration before committing
+- `/ubiquitous-language` — add or correct terms in `Ubiquitous_Language.md`
 - `/pr-feedback` — triage the latest Copilot review on the current PR
 
 ## Key Constraints
