@@ -42,7 +42,7 @@ Shared vocabulary for the Daily Work app. All planning, PRDs, code, tests, and c
 | **Tracer bullet** | The single most critical test that proves an end-to-end path works; written first in a TDD cycle | First test in `/test-plan` output |
 | **Vertical slice** | A feature change that touches every layer together: entity → DTO → endpoint → store → component → tests | How all features in this app are structured |
 | **Deep module** | A piece with a small, stable interface that encapsulates significant behavior and can be tested in isolation | Identified during `/write-a-prd` module design step |
-| **WeekOf string** | A Monday date in `YYYY-MM-DD` format — the canonical identifier for a week everywhere in the system | `weekOf: '2026-04-28'` always a Monday |
+| **WeekOf string** | A Monday date in `YYYY-MM-DD` format — the canonical identifier for a week everywhere in the system | `weekOf: '2026-04-27'` always a Monday |
 | **internal** | Default C# visibility for all types (entities, DTOs, endpoints, enums) — `public` only when crossing assembly boundaries | All types except `IApiMarker` |
 | **Results.\*** | The return type convention for Minimal API handlers — never `TypedResults` | `Results.Ok()`, `Results.Created()`, `Results.NotFound()` |
 | **Respawn** | The test isolation mechanism that truncates all DB tables before each test class runs | `_factory.ResetDatabaseAsync()` in `InitializeAsync()` |
