@@ -82,42 +82,6 @@ internal static class WorkItemEndpoints
 			return Results.Ok(item);
 		});
 
-		group.MapPut("/{id}/promote", async (AppDbContext db, int id) =>
-		{
-			var item = await db.WorkItems.FindAsync(id);
-			if (item is null)
-			{
-				return Results.NotFound();
-			}
-
-			// Demote any existing BigThing for the same week
-			var existing = await db.WorkItems
-				.Where(w => w.WeekOf == item.WeekOf && w.Category == WorkItemCategory.BigThing && w.Id != id)
-				.ToListAsync();
-
-			foreach (var e in existing)
-			{
-				e.Category = WorkItemCategory.SmallThing;
-			}
-
-			item.Category = WorkItemCategory.BigThing;
-			await db.SaveChangesAsync();
-			return Results.Ok(item);
-		});
-
-		group.MapPut("/{id}/demote", async (AppDbContext db, int id) =>
-		{
-			var item = await db.WorkItems.FindAsync(id);
-			if (item is null)
-			{
-				return Results.NotFound();
-			}
-
-			item.Category = WorkItemCategory.SmallThing;
-			await db.SaveChangesAsync();
-			return Results.Ok(item);
-		});
-
 		group.MapPut("/{id}/move-up", async (AppDbContext db, int id) =>
 		{
 			var item = await db.WorkItems.FindAsync(id);
