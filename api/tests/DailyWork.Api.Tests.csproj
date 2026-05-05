@@ -6,6 +6,7 @@
     <!-- Respawn brings in DB-vendor transitive packages (Oracle, etc.) that carry audit advisories.
          Test-only project, not shipped — suppress NuGet audit warnings to unblock builds. -->
     <NoWarn>$(NoWarn);NU1902;NU1903;NU1904</NoWarn>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
