@@ -23,9 +23,6 @@ For each new or drifted term, draft the table row(s) to add or update:
 **Technical convention:**
 | Term | Meaning | Example / Where Used |
 
-**Naming pattern:**
-| Pattern | Rule | Example |
-
 Place each term in the correct section. Use existing rows as a guide for detail level and style.
 
 ## Step 4 — Confirm with the user

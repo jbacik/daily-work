@@ -41,7 +41,7 @@ aspire/           # .NET Aspire AppHost and ServiceDefaults
 
 ## Ubiquitous Language
 
-`CONTEXT.md` at the project root defines the canonical vocabulary for this codebase — domain terms, technical conventions, and naming patterns. Read it before planning or implementing any feature. Use `/update-context` to add new terms as they emerge.
+`CONTEXT.md` at the project root defines the canonical vocabulary for this codebase — domain terms and technical conventions. Read it before planning or implementing any feature. Use `/update-context` to add new terms as they emerge.
 
 ## Architecture Decision Records
 

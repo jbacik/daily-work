@@ -33,7 +33,7 @@ Shared reference for the Daily Work app — defines what things are called, how 
 
 | Term | Meaning | Example / Where Used |
 |---|---|---|
-| **WeekOf string** | A Monday date in `YYYY-MM-DD` format — the canonical identifier for a week across the whole system | `weekOf: '2026-04-28'` |
+| **WeekOf string** | A Monday date in `YYYY-MM-DD` format — the canonical identifier for a week across the whole system | `weekOf: '2026-04-27'` |
 | **Vertical slice** | A feature change that touches every layer together: entity → DTO → endpoint → store → component → tests | How all features in this app are built |
 | **Tracer bullet** | The single most critical test that proves an end-to-end path works; written first in a TDD cycle | First test identified in `/test-plan` output |
 | **Deep module** | A piece with a small, stable interface that encapsulates significant behavior and can be tested in isolation | Identified during the `/write-a-prd` module design step |
