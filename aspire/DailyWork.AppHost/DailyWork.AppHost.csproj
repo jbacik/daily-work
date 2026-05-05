@@ -4,6 +4,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <UserSecretsId>dailywork-apphost</UserSecretsId>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Aspire Dashboard SDK injects platform-specific packages (e.g. linux-x64) that
+         the Windows-generated lock file doesn't know about. Disable locked-mode
+         enforcement here while keeping the lock file for caching on the same platform. -->
+    <RestoreLockedMode>false</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>

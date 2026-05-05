@@ -5,6 +5,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 14
+      semver-major-days: 21
     groups:
       npm-minor-patch:
         update-types:
@@ -19,6 +22,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 14
+      semver-major-days: 21
     groups:
       nuget-minor-patch:
         update-types:
@@ -33,5 +39,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 14
+      semver-major-days: 21
     commit-message:
       prefix: ci
