@@ -33,29 +33,7 @@ Shared reference for the Daily Work app — defines what things are called, how 
 
 | Term | Meaning | Example / Where Used |
 |---|---|---|
-| **Store** | A Pinia setup store (`defineStore('id', () => {...})`) in `web/src/stores/` | `dailyTasksStore`, `readWatchStore` |
-| **Endpoint file** | One `internal static class` per resource in `api/src/Endpoints/`, with a single `Map*Endpoints` extension method | `WorkItemEndpoints.cs`, `StandupEndpoints.cs` |
-| **Handler** | The inline async lambda passed directly to `MapGet` / `MapPost` / etc. — never a separate class | `group.MapPost("/", async (AppDbContext db, ...) => { ... })` |
-| **Entity** | A C# class in `api/src/Entities/` mapped to a PostgreSQL table via EF Core | `WorkItem`, `ReadWatchItem`, `ScratchPad` |
-| **DTO** | A C# `record` in `api/src/Dtos/` used as the request body shape; never used as a response | `CreateWorkItemDto`, `UpdateReadWatchItemDto` |
-| **client** | The Axios instance at `@/api/client.ts` — has a response interceptor that returns `response.data` directly | `await client.get('/api/work-items')` returns the array, not `{ data: [...] }` |
-| **JsonOptions** | The static `JsonSerializerOptions` in every xUnit test class; must include `JsonStringEnumConverter` | `ReadFromJsonAsync<WorkItem>(JsonOptions)` |
-| **Tracer bullet** | The single most critical test that proves an end-to-end path works; written first in a TDD cycle | First test identified in `/test-plan` output |
-| **Vertical slice** | A feature change that touches every layer together: entity → DTO → endpoint → store → component → tests | How all features in this app are built |
-| **Deep module** | A piece with a small, stable interface that encapsulates significant behavior and can be tested in isolation | Identified during the `/write-a-prd` module design step |
 | **WeekOf string** | A Monday date in `YYYY-MM-DD` format — the canonical identifier for a week across the whole system | `weekOf: '2026-04-28'` |
-| **internal** | Default C# visibility for all types (entities, DTOs, endpoints, enums) — `public` only when crossing assembly boundaries | All types except `IApiMarker` |
-| **Results.\*** | Return type convention for Minimal API handlers — never `TypedResults` | `Results.Ok()`, `Results.Created()`, `Results.NotFound()` |
-| **Respawn** | The test isolation mechanism that truncates all DB tables before each test class runs | `_factory.ResetDatabaseAsync()` in `InitializeAsync()` |
-
----
-
-## Naming Patterns
-
-| Pattern | Rule | Example |
-|---|---|---|
-| xUnit test method | `Route_Description_WhenCondition` — three parts, no `Should_` prefix | `PostWorkItem_Returns422_WhenDailyLimitExceeded` |
-| Vitest test name | `Subject_Description_WhenCondition` — three parts, no `Should_` prefix | `WorkItemList_ShowsEmptyState_WhenNoItems` |
-| Migration name | PascalCase describing the schema change — never vague names | `AddSortOrderToWorkItems`, never `Update1` or `Fix` |
-| Commit message | `type(scope): description` — imperative, lowercase, no trailing period | `feat(api): add scratch pad endpoint` |
-| Branch name | `type/short-kebab-description` | `feat/scratch-pad-endpoint` |
+| **Vertical slice** | A feature change that touches every layer together: entity → DTO → endpoint → store → component → tests | How all features in this app are built |
+| **Tracer bullet** | The single most critical test that proves an end-to-end path works; written first in a TDD cycle | First test identified in `/test-plan` output |
+| **Deep module** | A piece with a small, stable interface that encapsulates significant behavior and can be tested in isolation | Identified during the `/write-a-prd` module design step |
