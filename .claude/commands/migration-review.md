@@ -12,7 +12,7 @@ ls -t api/src/Migrations/*.cs | grep -v AppDbContextModelSnapshot.cs | head -1
 ```
 and use the result.
 
-Read the migration file in full. Also read `api/src/AppDbContext.cs` to cross-reference indexes and entity configuration.
+Read the migration file in full. Also read `api/src/Data/AppDbContext.cs` to cross-reference indexes and entity configuration.
 
 ## Step 2 — Run each check
 
