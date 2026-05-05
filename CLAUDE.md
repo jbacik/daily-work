@@ -39,6 +39,14 @@ aspire/           # .NET Aspire AppHost and ServiceDefaults
 .claude/rules/    # Coding conventions (read these before making changes)
 ```
 
+## Ubiquitous Language
+
+`CONTEXT.md` at the project root defines the canonical vocabulary for this codebase — domain terms and technical conventions. Read it before planning or implementing any feature. Use `/update-context` to add new terms as they emerge.
+
+## Architecture Decision Records
+
+Significant decisions (hard to reverse, non-obvious, genuine trade-offs) are recorded in `docs/decision-records/` using the ADR format. Use `/create-adr` during or after a planning session to capture them. The template lives at `docs/decision-records/ADR-TEMPLATE.md`.
+
 ## Coding Conventions
 
 All conventions live in `.claude/rules/`. Read the relevant file before touching that layer:
@@ -63,6 +71,12 @@ All conventions live in `.claude/rules/`. Read the relevant file before touching
 
 ## Slash Commands
 
+- `/grill-me` — Socratic design interview before implementation; surfaces assumptions and gaps
+- `/write-a-prd` — synthesize design decisions into a structured PRD, submitted as a GitHub issue
+- `/test-plan` — enumerate all xUnit + Vitest test cases before writing any test code
+- `/migration-review` — verify a scaffolded EF Core migration before committing
+- `/create-adr` — record a significant architectural decision in `docs/decision-records/`
+- `/update-context` — add or correct terms in `CONTEXT.md`
 - `/pr-feedback` — triage the latest Copilot review on the current PR
 
 ## Key Constraints
