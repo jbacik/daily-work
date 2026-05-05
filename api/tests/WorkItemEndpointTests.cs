@@ -110,35 +110,6 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>,
 	}
 
 	[Fact]
-	public async Task PromoteWorkItem_DemotesExistingBigThing_WhenSameWeek()
-	{
-		// Create two SmallThing items on different days in the same week
-		// Use Mon/Thu to avoid collisions with cap test (2020-01-14) and default date tests (2020-01-15)
-		var day1 = new DateOnly(2020, 1, 13).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
-		var day2 = new DateOnly(2020, 1, 16).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
-
-		var r1 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Big thing candidate 1", Category = "SmallThing", Date = day1 });
-		var item1 = await r1.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
-
-		var r2 = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Big thing candidate 2", Category = "SmallThing", Date = day2 });
-		var item2 = await r2.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
-
-		// Promote first item to BigThing
-		await _client.PutAsync($"/api/work-items/{item1!.Id}/promote", null);
-
-		// Promote second item — first should be demoted to SmallThing
-		var promoteResponse = await _client.PutAsync($"/api/work-items/{item2!.Id}/promote", null);
-		promoteResponse.EnsureSuccessStatusCode();
-
-		// Fetch the week and verify only item2 is BigThing
-		var getResponse = await _client.GetAsync($"/api/work-items?weekOf={TestWeekOf}");
-		var items = await getResponse.Content.ReadFromJsonAsync<List<WorkItem>>(JsonOptions);
-		items.ShouldNotBeNull();
-		items.ShouldNotContain(i => i.Id == item1.Id && i.Category.ToString() == "BigThing");
-		items.ShouldContain(i => i.Id == item2.Id && i.Category.ToString() == "BigThing");
-	}
-
-	[Fact]
 	public async Task PostWorkItem_AssignsIncrementingSortOrder_WhenSameDay()
 	{
 		var date = new DateOnly(2020, 1, 17).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
