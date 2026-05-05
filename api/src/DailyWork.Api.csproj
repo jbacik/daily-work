@@ -3,6 +3,7 @@
   <PropertyGroup>
     <UserSecretsId>dailywork-api</UserSecretsId>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>

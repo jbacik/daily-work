@@ -27,7 +27,7 @@ jobs:
           dotnet-quality: preview
 
       - name: Restore
-        run: dotnet restore daily-work.slnx --locked-mode
+        run: dotnet restore daily-work.slnx
 
       - name: Verify formatting
         run: dotnet format daily-work.slnx --verify-no-changes --no-restore
