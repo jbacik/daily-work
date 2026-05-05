@@ -9,7 +9,7 @@ Shared reference for the Daily Work app — defines what things are called, how 
 | Term | Definition | Code Name | UI Label | Gotchas |
 |---|---|---|---|---|
 | **WorkItem** | A single task assigned to a specific calendar day | `WorkItem` entity, `WorkItem` TS interface | Task / Item | Has both a `Date` (the day) and a `WeekOf` (the Monday of that week) |
-| **BigThing** | The single weekly priority — one allowed per week | `WorkItemCategory.BigThing` (value 1) | Big Thing | Max 1 per week enforced server-side; promoting a new BigThing demotes the old one |
+| **BigThing** | The single weekly priority — one allowed per week | `WorkItemCategory.BigThing` (value 1) | Big Thing | Max 1 per week enforced server-side; BigThings are entered directly, not promoted from SmallThings |
 | **SmallThing** | A daily task — up to 5 per day | `WorkItemCategory.SmallThing` (value 2) | Small Thing | Max 5 per day enforced server-side; returns 422 if exceeded |
 | **WeekOf** | The Monday date that identifies a calendar week | `WeekOf` (`string` `YYYY-MM-DD`) | Week of [date] | Always a Monday — never inferred without calculating; stored as ISO date string, not a DateTime |
 | **Date** | The specific calendar day a WorkItem belongs to | `Date` (`DateOnly` in C#, `string` `YYYY-MM-DD` in TS) | [date] | Distinct from `WeekOf`; a WorkItem always has both |
