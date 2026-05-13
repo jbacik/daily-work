@@ -12,7 +12,7 @@ internal static class WorkSessionEndpoints
 
 		group.MapGet("/today", async (AppDbContext db, DateOnly date) =>
 		{
-			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
+			var session = await db.WorkSessions.AsNoTracking().SingleOrDefaultAsync(s => s.Date == date);
 			return session is null ? Results.NoContent() : Results.Ok(session);
 		});
 
