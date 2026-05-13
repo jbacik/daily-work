@@ -39,20 +39,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
+  <button
     v-if="state === 'not-in'"
-    class="flex items-center gap-2 text-muted-foreground text-sm cursor-pointer hover:text-foreground"
+    type="button"
+    class="flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground"
     data-testid="clock-status-not-in"
-    role="button"
-    tabindex="0"
     @click="handleClockIn"
-    @keydown.enter.prevent="handleClockIn"
-    @keydown.space.prevent="handleClockIn"
   >
     <span class="text-primary">$</span>
     <span>clock-in</span>
     <span class="inline-block w-[0.5em] h-[0.9em] bg-foreground align-text-bottom ml-1 animate-blink"></span>
-  </div>
+  </button>
 
   <div
     v-else-if="state === 'in'"

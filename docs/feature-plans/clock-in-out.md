@@ -67,7 +67,7 @@ New file `api/src/Endpoints/WorkSessionEndpoints.cs`, mounted at `/api/work-sess
 - `POST /clock-in` → create-or-set `ClockedInAt = UtcNow`. **Idempotent no-op** if already set. Returns 200 with the session.
 - `POST /clock-out` → create-or-set `ClockedOutAt = UtcNow` (also allowed with no prior clock-in). **Idempotent no-op** if already set. Returns 200.
 
-"Today" is computed server-side as `DateOnly.FromDateTime(DateTime.Now)`. Cross-midnight is handled implicitly: clock-out updates whichever date's session is in flight, even if it now technically belongs to tomorrow.
+All three endpoints require a `date=YYYY-MM-DD` query parameter supplied by the client. The web store passes `getToday()` from `@/utils/week` (local date string) on every call. This keeps date-keying aligned with the rest of the app's local-date model and avoids midnight-boundary drift for non-UTC users.
 
 ### Web — types & store
 
@@ -92,6 +92,7 @@ New file `api/src/Endpoints/WorkSessionEndpoints.cs`, mounted at `/api/work-sess
 
 - **API** — `api/tests/WorkSessionEndpointTests.cs`, mirroring `WorkItemEndpointTests.cs`:
   - `GetToday_Returns204_WhenNoSessionExists`
+  - `GetToday_Returns400_WhenDateMissing`
   - `GetToday_ReturnsSession_WhenSessionExists`
   - `PostClockIn_CreatesSession_WhenNoneExists`
   - `PostClockIn_IsIdempotent_WhenAlreadyClockedIn`
