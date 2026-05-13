@@ -29,7 +29,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public Task DisposeAsync() => Task.CompletedTask;
 
 	private string Today => _factory.DateTimeProvider.UtcToday.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-	private string GetTodayUrl => $"/api/work-sessions/today?date={Today}";
+	private string GetTodayUrl => $"/api/work-sessions?date={Today}";
 	private string ClockInUrl => $"/api/work-sessions/clock-in?date={Today}";
 	private string ClockOutUrl => $"/api/work-sessions/clock-out?date={Today}";
 
@@ -47,7 +47,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task GetToday_Returns400_WhenDateMissing()
 	{
 		// Act
-		var response = await _client.GetAsync("/api/work-sessions/today");
+		var response = await _client.GetAsync("/api/work-sessions");
 
 		// Assert
 		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);

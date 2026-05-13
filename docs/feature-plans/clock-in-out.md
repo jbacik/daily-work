@@ -63,7 +63,7 @@ Pure time tracking. No carryover logic, no `WorkItem` schema changes.
 
 New file `api/src/Endpoints/WorkSessionEndpoints.cs`, mounted at `/api/work-sessions`, registered in `Program.cs`:
 
-- `GET /today` → today's session, or **204 No Content** if none.
+- `GET /` → session for the supplied date, or **204 No Content** if none.
 - `POST /clock-in` → create-or-set `ClockedInAt = UtcNow`. **Idempotent no-op** if already set. Returns 200 with the session.
 - `POST /clock-out` → create-or-set `ClockedOutAt = UtcNow` (also allowed with no prior clock-in). **Idempotent no-op** if already set. Returns 200.
 

@@ -41,7 +41,7 @@ describe('useWorkSessionStore', () => {
 
     // Assert
     expect(store.today).toBeNull()
-    expect(mockGet).toHaveBeenCalledWith('/api/work-sessions/today', { params: { date: getToday() } })
+    expect(mockGet).toHaveBeenCalledWith('/api/work-sessions', { params: { date: getToday() } })
   })
 
   it('fetchToday_SetsToday_WhenSessionExists', async () => {

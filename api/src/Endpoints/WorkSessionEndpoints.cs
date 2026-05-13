@@ -10,7 +10,7 @@ internal static class WorkSessionEndpoints
 	{
 		var group = app.MapGroup("/api/work-sessions");
 
-		group.MapGet("/today", async (AppDbContext db, DateOnly date) =>
+		group.MapGet("/", async (AppDbContext db, DateOnly date) =>
 		{
 			var session = await db.WorkSessions.AsNoTracking().SingleOrDefaultAsync(s => s.Date == date);
 			return session is null ? Results.NoContent() : Results.Ok(session);

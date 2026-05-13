@@ -9,7 +9,7 @@ export const useWorkSessionStore = defineStore('workSession', () => {
 
   async function fetchToday() {
     try {
-      const data = await client.get('/api/work-sessions/today', { params: { date: getToday() } }) as any
+      const data = await client.get('/api/work-sessions', { params: { date: getToday() } }) as any
       today.value = data && data.id ? data as WorkSession : null
     } catch {
       today.value = null
