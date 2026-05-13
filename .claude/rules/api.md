@@ -1,7 +1,3 @@
----
-apply: "api/**"
----
-
 # .NET API Conventions
 
 ## Endpoint File Structure
@@ -41,7 +37,7 @@ Return `Results.Ok()`, `Results.Created()`, `Results.NotFound()`, `Results.NoCon
 - `db.Entity.FindAsync(id)` for single-by-PK lookups (not `FirstOrDefaultAsync`)
 - `db.Entity.Where(...).ToListAsync()` for filtered lists
 - Always `await db.SaveChangesAsync()` after mutations
-- No `AsNoTracking()` (operations are simple and short-lived)
+- Use `.AsNoTracking()` on GET handlers that return data without mutating it — saves the change-tracker overhead since the entity is never modified
 
 ## Entity Conventions
 

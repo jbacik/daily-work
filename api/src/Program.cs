@@ -48,5 +48,6 @@ app.MapReadWatchEndpoints();
 app.MapStandupEndpoints();
 app.MapScratchPadEndpoints();
 app.MapCalendarEndpoints();
+app.MapWorkSessionEndpoints();
 
 app.Run();
