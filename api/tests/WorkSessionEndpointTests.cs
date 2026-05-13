@@ -32,6 +32,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	private string GetTodayUrl => $"/api/work-sessions?date={Today}";
 	private string ClockInUrl => $"/api/work-sessions/clock-in?date={Today}";
 	private string ClockOutUrl => $"/api/work-sessions/clock-out?date={Today}";
+	private string PunchUrl => $"/api/work-sessions?date={Today}";
 
 	[Fact]
 	public async Task GetToday_Returns204_WhenNoSessionExists()
@@ -159,5 +160,100 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 		secondSession.ShouldNotBeNull();
 		secondSession.Id.ShouldBe(firstSession.Id);
 		secondSession.ClockedOutAt.ShouldBe(originalClockOutAt);
+	}
+
+	[Fact]
+	public async Task PutPunch_CreatesSession_WhenNoneExists()
+	{
+		// Arrange
+		var clockIn = _factory.DateTimeProvider.UtcNow.AddHours(-8);
+		var clockOut = _factory.DateTimeProvider.UtcNow;
+		var payload = new { ClockedInAt = clockIn, ClockedOutAt = clockOut };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Date.ShouldBe(_factory.DateTimeProvider.UtcToday);
+		session.ClockedInAt.ShouldBe(clockIn);
+		session.ClockedOutAt.ShouldBe(clockOut);
+	}
+
+	[Fact]
+	public async Task PutPunch_UpdatesExistingSession_WithNewTimes()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync(ClockInUrl, new { });
+		var newClockIn = _factory.DateTimeProvider.UtcNow.AddHours(-4);
+		var newClockOut = _factory.DateTimeProvider.UtcNow;
+		var payload = new { ClockedInAt = newClockIn, ClockedOutAt = newClockOut };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.ClockedInAt.ShouldBe(newClockIn);
+		session.ClockedOutAt.ShouldBe(newClockOut);
+	}
+
+	[Fact]
+	public async Task PutPunch_ClearsTimestamps_WhenNullsProvided()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync(ClockInUrl, new { });
+		var payload = new { ClockedInAt = (DateTime?)null, ClockedOutAt = (DateTime?)null };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.ClockedInAt.ShouldBeNull();
+		session.ClockedOutAt.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutPunch_Returns422_WhenClockOutSetWithoutClockIn()
+	{
+		// Arrange
+		var payload = new { ClockedInAt = (DateTime?)null, ClockedOutAt = _factory.DateTimeProvider.UtcNow };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+	}
+
+	[Fact]
+	public async Task PutPunch_Returns422_WhenClockOutNotAfterClockIn()
+	{
+		// Arrange
+		var clockIn = _factory.DateTimeProvider.UtcNow;
+		var payload = new { ClockedInAt = clockIn, ClockedOutAt = clockIn.AddHours(-1) };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+	}
+
+	[Fact]
+	public async Task PutPunch_Returns400_WhenDateMissing()
+	{
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/work-sessions", new { });
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 	}
 }

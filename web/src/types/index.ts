@@ -8,7 +8,7 @@ export interface WorkItem {
   weekOf: string
 }
 
-export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week'
+export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week' | 'punch'
 
 export interface ReadWatchItem {
   id: number
