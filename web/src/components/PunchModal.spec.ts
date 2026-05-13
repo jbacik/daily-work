@@ -101,7 +101,7 @@ describe('PunchModal', () => {
     endMM.value = '00'
     endMM.dispatchEvent(new Event('input'))
     await nextTick()
-    q('punch-update-btn')!.click()
+    q('punch-save-btn')!.click()
     await nextTick()
 
     // Assert
@@ -126,7 +126,7 @@ describe('PunchModal', () => {
     endHH.value = '09'; endHH.dispatchEvent(new Event('input'))
     endMM.value = '00'; endMM.dispatchEvent(new Event('input'))
     await nextTick()
-    q('punch-update-btn')!.click()
+    q('punch-save-btn')!.click()
     await nextTick()
 
     // Assert
@@ -152,7 +152,7 @@ describe('PunchModal', () => {
     endHH.value = '17'; endHH.dispatchEvent(new Event('input'))
     endMM.value = '30'; endMM.dispatchEvent(new Event('input'))
     await nextTick()
-    q('punch-update-btn')!.click()
+    q('punch-save-btn')!.click()
     await flushPromises()
 
     // Assert
@@ -200,7 +200,7 @@ describe('PunchModal', () => {
     const wrapper = await mountModal(true)
 
     // Act
-    q('punch-cancel-btn')!.click()
+    q('punch-exit-btn')!.click()
     await nextTick()
 
     // Assert

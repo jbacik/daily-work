@@ -89,7 +89,7 @@ function validate(): string | null {
   return null
 }
 
-async function handleUpdate() {
+async function handleSave() {
   const err = validate()
   if (err) {
     errorMsg.value = err
@@ -117,7 +117,22 @@ watch(() => isOpen, (open) => {
 
 function handleKeyDown(e: KeyboardEvent) {
   if (!isOpen) return
+
   if (e.key === 'Escape') {
+    e.preventDefault()
+    emit('close')
+    return
+  }
+
+  const target = e.target as HTMLElement
+  const isInInput = target.tagName === 'INPUT'
+  if (isInInput) return
+
+  const key = e.key.toLowerCase()
+  if (key === 's') {
+    e.preventDefault()
+    handleSave()
+  } else if (key === 'e') {
     e.preventDefault()
     emit('close')
   }
@@ -228,25 +243,28 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
 
         <!-- Action bar -->
         <div class="border-t-4 border-double border-primary px-4 py-3 flex items-center justify-center gap-8">
+          <span class="animate-pulse text-accent">_</span>
           <button
             type="button"
             class="hover:text-primary transition-colors"
-            data-testid="punch-update-btn"
-            @click="handleUpdate"
+            data-testid="punch-save-btn"
+            @click="handleSave"
           >
             <span class="text-accent">[</span>
-            <span class="text-primary font-bold">Update</span>
+            <span class="text-primary font-bold">S</span>
             <span class="text-accent">]</span>
+            <span class="text-muted-foreground">ave</span>
           </button>
           <button
             type="button"
             class="hover:text-primary transition-colors"
-            data-testid="punch-cancel-btn"
+            data-testid="punch-exit-btn"
             @click="$emit('close')"
           >
             <span class="text-accent">[</span>
-            <span class="text-muted-foreground">Cancel</span>
+            <span class="text-primary font-bold">E</span>
             <span class="text-accent">]</span>
+            <span class="text-muted-foreground">xit</span>
           </button>
         </div>
       </div>
