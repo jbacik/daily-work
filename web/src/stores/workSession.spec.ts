@@ -12,6 +12,7 @@ vi.mock('@/api/client', () => ({
 
 import client from '@/api/client'
 import { useWorkSessionStore } from './workSession'
+import { getToday } from '@/utils/week'
 
 const mockGet = (client as any).get as Mock
 const mockPost = (client as any).post as Mock
@@ -40,6 +41,7 @@ describe('useWorkSessionStore', () => {
 
     // Assert
     expect(store.today).toBeNull()
+    expect(mockGet).toHaveBeenCalledWith('/api/work-sessions/today', { params: { date: getToday() } })
   })
 
   it('fetchToday_SetsToday_WhenSessionExists', async () => {
@@ -76,7 +78,7 @@ describe('useWorkSessionStore', () => {
     await store.clockIn()
 
     // Assert
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', {})
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', null, { params: { date: getToday() } })
     expect(store.today).toEqual(sessionFixture)
   })
 
@@ -90,7 +92,7 @@ describe('useWorkSessionStore', () => {
     await store.clockOut()
 
     // Assert
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', {})
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: getToday() } })
     expect(store.today).toEqual(finished)
   })
 })

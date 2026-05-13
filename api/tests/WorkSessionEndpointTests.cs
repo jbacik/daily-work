@@ -28,24 +28,39 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public Task InitializeAsync() => _factory.ResetDatabaseAsync();
 	public Task DisposeAsync() => Task.CompletedTask;
 
+	private string Today => _factory.DateTimeProvider.UtcToday.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+	private string GetTodayUrl => $"/api/work-sessions/today?date={Today}";
+	private string ClockInUrl => $"/api/work-sessions/clock-in?date={Today}";
+	private string ClockOutUrl => $"/api/work-sessions/clock-out?date={Today}";
+
 	[Fact]
 	public async Task GetToday_Returns204_WhenNoSessionExists()
 	{
 		// Act
-		var response = await _client.GetAsync("/api/work-sessions/today");
+		var response = await _client.GetAsync(GetTodayUrl);
 
 		// Assert
 		response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 	}
 
 	[Fact]
+	public async Task GetToday_Returns400_WhenDateMissing()
+	{
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/today");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	public async Task GetToday_ReturnsSession_WhenSessionExists()
 	{
 		// Arrange
-		await _client.PostAsJsonAsync("/api/work-sessions/clock-in", new { });
+		await _client.PostAsJsonAsync(ClockInUrl, new { });
 
 		// Act
-		var response = await _client.GetAsync("/api/work-sessions/today");
+		var response = await _client.GetAsync(GetTodayUrl);
 
 		// Assert
 		response.EnsureSuccessStatusCode();
@@ -60,7 +75,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task PostClockIn_CreatesSession_WhenNoneExists()
 	{
 		// Act
-		var response = await _client.PostAsJsonAsync("/api/work-sessions/clock-in", new { });
+		var response = await _client.PostAsJsonAsync(ClockInUrl, new { });
 
 		// Assert
 		response.EnsureSuccessStatusCode();
@@ -75,14 +90,14 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task PostClockIn_IsIdempotent_WhenAlreadyClockedIn()
 	{
 		// Arrange
-		var first = await _client.PostAsJsonAsync("/api/work-sessions/clock-in", new { });
+		var first = await _client.PostAsJsonAsync(ClockInUrl, new { });
 		var firstSession = await first.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
 		firstSession.ShouldNotBeNull();
 		var originalClockInAt = firstSession.ClockedInAt;
 
 		// Act — advance the clock and try again; the timestamp should not change
 		_factory.DateTimeProvider.UtcNow = _factory.DateTimeProvider.UtcNow.AddHours(1);
-		var second = await _client.PostAsJsonAsync("/api/work-sessions/clock-in", new { });
+		var second = await _client.PostAsJsonAsync(ClockInUrl, new { });
 
 		// Assert
 		second.EnsureSuccessStatusCode();
@@ -96,7 +111,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task PostClockOut_CreatesSession_WhenNoneExists()
 	{
 		// Act — clock out with no prior clock-in is allowed
-		var response = await _client.PostAsJsonAsync("/api/work-sessions/clock-out", new { });
+		var response = await _client.PostAsJsonAsync(ClockOutUrl, new { });
 
 		// Assert
 		response.EnsureSuccessStatusCode();
@@ -111,11 +126,11 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task PostClockOut_UpdatesSession_WhenClockedIn()
 	{
 		// Arrange
-		await _client.PostAsJsonAsync("/api/work-sessions/clock-in", new { });
+		await _client.PostAsJsonAsync(ClockInUrl, new { });
 		_factory.DateTimeProvider.UtcNow = _factory.DateTimeProvider.UtcNow.AddHours(8);
 
 		// Act
-		var response = await _client.PostAsJsonAsync("/api/work-sessions/clock-out", new { });
+		var response = await _client.PostAsJsonAsync(ClockOutUrl, new { });
 
 		// Assert
 		response.EnsureSuccessStatusCode();
@@ -129,14 +144,14 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	public async Task PostClockOut_IsIdempotent_WhenAlreadyClockedOut()
 	{
 		// Arrange
-		var first = await _client.PostAsJsonAsync("/api/work-sessions/clock-out", new { });
+		var first = await _client.PostAsJsonAsync(ClockOutUrl, new { });
 		var firstSession = await first.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
 		firstSession.ShouldNotBeNull();
 		var originalClockOutAt = firstSession.ClockedOutAt;
 
 		// Act — advance the clock and try again; the timestamp should not change
 		_factory.DateTimeProvider.UtcNow = _factory.DateTimeProvider.UtcNow.AddHours(1);
-		var second = await _client.PostAsJsonAsync("/api/work-sessions/clock-out", new { });
+		var second = await _client.PostAsJsonAsync(ClockOutUrl, new { });
 
 		// Assert
 		second.EnsureSuccessStatusCode();

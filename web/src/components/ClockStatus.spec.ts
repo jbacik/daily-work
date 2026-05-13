@@ -85,7 +85,7 @@ describe('ClockStatus', () => {
     await wrapper.get('[data-testid="clock-status-not-in"]').trigger('click')
     await flushAsync()
 
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', {})
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', null, { params: { date: expect.any(String) } })
     expect(wrapper.find('[data-testid="clock-status-in"]').exists()).toBe(true)
   })
 
@@ -102,7 +102,7 @@ describe('ClockStatus', () => {
     await wrapper.get('[data-testid="clock-out-btn"]').trigger('click')
     await flushAsync()
 
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', {})
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: expect.any(String) } })
     expect(wrapper.find('[data-testid="clock-status-out"]').exists()).toBe(true)
   })
 

@@ -10,23 +10,21 @@ internal static class WorkSessionEndpoints
 	{
 		var group = app.MapGroup("/api/work-sessions");
 
-		group.MapGet("/today", async (AppDbContext db, IDateTimeProvider dateTime) =>
+		group.MapGet("/today", async (AppDbContext db, DateOnly date) =>
 		{
-			var today = dateTime.UtcToday;
-			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == today);
+			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
 			return session is null ? Results.NoContent() : Results.Ok(session);
 		});
 
-		group.MapPost("/clock-in", async (AppDbContext db, IDateTimeProvider dateTime) =>
+		group.MapPost("/clock-in", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly date) =>
 		{
-			var today = dateTime.UtcToday;
-			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == today);
+			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
 
 			if (session is null)
 			{
 				session = new WorkSession
 				{
-					Date = today,
+					Date = date,
 					ClockedInAt = dateTime.UtcNow,
 				};
 				db.WorkSessions.Add(session);
@@ -43,16 +41,15 @@ internal static class WorkSessionEndpoints
 			return Results.Ok(session);
 		});
 
-		group.MapPost("/clock-out", async (AppDbContext db, IDateTimeProvider dateTime) =>
+		group.MapPost("/clock-out", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly date) =>
 		{
-			var today = dateTime.UtcToday;
-			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == today);
+			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
 
 			if (session is null)
 			{
 				session = new WorkSession
 				{
-					Date = today,
+					Date = date,
 					ClockedOutAt = dateTime.UtcNow,
 				};
 				db.WorkSessions.Add(session);

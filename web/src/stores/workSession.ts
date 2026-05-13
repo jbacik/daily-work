@@ -2,13 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import client from '@/api/client'
 import type { WorkSession } from '@/types'
+import { getToday } from '@/utils/week'
 
 export const useWorkSessionStore = defineStore('workSession', () => {
   const today = ref<WorkSession | null>(null)
 
   async function fetchToday() {
     try {
-      const data = await client.get('/api/work-sessions/today') as any
+      const data = await client.get('/api/work-sessions/today', { params: { date: getToday() } }) as any
       today.value = data && data.id ? data as WorkSession : null
     } catch {
       today.value = null
@@ -16,11 +17,11 @@ export const useWorkSessionStore = defineStore('workSession', () => {
   }
 
   async function clockIn() {
-    today.value = await client.post('/api/work-sessions/clock-in', {}) as any
+    today.value = await client.post('/api/work-sessions/clock-in', null, { params: { date: getToday() } }) as any
   }
 
   async function clockOut() {
-    today.value = await client.post('/api/work-sessions/clock-out', {}) as any
+    today.value = await client.post('/api/work-sessions/clock-out', null, { params: { date: getToday() } }) as any
   }
 
   return { today, fetchToday, clockIn, clockOut }
