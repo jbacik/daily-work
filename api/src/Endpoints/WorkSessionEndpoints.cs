@@ -26,6 +26,7 @@ internal static class WorkSessionEndpoints
 				{
 					Date = date,
 					ClockedInAt = dateTime.UtcNow,
+					CreatedAt = dateTime.UtcNow,
 				};
 				db.WorkSessions.Add(session);
 				await db.SaveChangesAsync();
@@ -51,6 +52,7 @@ internal static class WorkSessionEndpoints
 				{
 					Date = date,
 					ClockedOutAt = dateTime.UtcNow,
+					CreatedAt = dateTime.UtcNow,
 				};
 				db.WorkSessions.Add(session);
 				await db.SaveChangesAsync();
