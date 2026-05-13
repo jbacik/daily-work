@@ -22,3 +22,11 @@ export interface ReadWatchItem {
   weekConsumed: string | null
   date: string
 }
+
+export interface WorkSession {
+  id: number
+  date: string
+  clockedInAt: string | null
+  clockedOutAt: string | null
+  createdAt: string
+}

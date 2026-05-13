@@ -13,6 +13,7 @@ import WeekOverview from '@/components/WeekOverview.vue'
 import ReadWatchList from '@/components/ReadWatchList.vue'
 import ScratchPad from '@/components/ScratchPad.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
+import ClockStatus from '@/components/ClockStatus.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
@@ -170,6 +171,7 @@ onMounted(() => {
       <!-- Daily View -->
       <main v-if="!isPastWeek && view === 'daily'" class="space-y-6 mt-6">
         <DailyTasksCompact />
+        <ClockStatus />
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ScratchPad />
           <ReadWatchList />
