@@ -115,6 +115,15 @@ onUnmounted(() => {
           </button>
 
           <button
+            data-testid="cmd-punch"
+            class="w-full text-left px-2 py-1 hover:bg-secondary/50 transition-colors"
+            @click="handleCommandClick('punch')"
+          >
+            <span class="text-accent">/punch</span>
+            <span class="text-muted-foreground"> - adjust your clock in or out time</span>
+          </button>
+
+          <button
             data-testid="cmd-archive"
             class="w-full text-left px-2 py-1 hover:bg-secondary/50 transition-colors"
             @click="toggleArchive"

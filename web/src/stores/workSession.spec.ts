@@ -16,6 +16,7 @@ import { getToday } from '@/utils/week'
 
 const mockGet = (client as any).get as Mock
 const mockPost = (client as any).post as Mock
+const mockPut = (client as any).put as Mock
 
 const sessionFixture = {
   id: 1,
@@ -94,5 +95,43 @@ describe('useWorkSessionStore', () => {
     // Assert
     expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: getToday() } })
     expect(store.today).toEqual(finished)
+  })
+
+  it('punch_UpdatesToday_WhenSuccessful', async () => {
+    // Arrange
+    const clockedIn = new Date('2026-05-13T13:03:42Z')
+    const clockedOut = new Date('2026-05-13T21:42:11Z')
+    const updated = { ...sessionFixture, clockedOutAt: clockedOut.toISOString() }
+    mockPut.mockResolvedValue(updated)
+    const store = useWorkSessionStore()
+
+    // Act
+    await store.punch(clockedIn, clockedOut)
+
+    // Assert
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      { clockedInAt: clockedIn.toISOString(), clockedOutAt: clockedOut.toISOString() },
+      { params: { date: getToday() } },
+    )
+    expect(store.today).toEqual(updated)
+  })
+
+  it('punch_SendsNulls_WhenTimesAreNull', async () => {
+    // Arrange
+    const cleared = { ...sessionFixture, clockedInAt: null, clockedOutAt: null }
+    mockPut.mockResolvedValue(cleared)
+    const store = useWorkSessionStore()
+
+    // Act
+    await store.punch(null, null)
+
+    // Assert
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      { clockedInAt: null, clockedOutAt: null },
+      { params: { date: getToday() } },
+    )
+    expect(store.today).toEqual(cleared)
   })
 })

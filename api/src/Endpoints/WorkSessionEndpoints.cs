@@ -1,4 +1,5 @@
 using DailyWork.Api.Data;
+using DailyWork.Api.Dtos;
 using DailyWork.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,6 +66,37 @@ internal static class WorkSessionEndpoints
 				await db.SaveChangesAsync();
 			}
 
+			return Results.Ok(session);
+		});
+
+		group.MapPut("/", async (AppDbContext db, IDateTimeProvider dateTime, PunchWorkSessionDto dto, DateOnly date) =>
+		{
+			if (dto.ClockedOutAt.HasValue && !dto.ClockedInAt.HasValue)
+				return Results.Problem("Cannot set clock-out without clock-in", statusCode: 422);
+
+			if (dto.ClockedInAt.HasValue && dto.ClockedOutAt.HasValue && dto.ClockedOutAt.Value <= dto.ClockedInAt.Value)
+				return Results.Problem("Clock-out must be after clock-in", statusCode: 422);
+
+			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
+
+			if (session is null)
+			{
+				session = new WorkSession
+				{
+					Date = date,
+					ClockedInAt = dto.ClockedInAt,
+					ClockedOutAt = dto.ClockedOutAt,
+					CreatedAt = dateTime.UtcNow,
+				};
+				db.WorkSessions.Add(session);
+			}
+			else
+			{
+				session.ClockedInAt = dto.ClockedInAt;
+				session.ClockedOutAt = dto.ClockedOutAt;
+			}
+
+			await db.SaveChangesAsync();
 			return Results.Ok(session);
 		});
 

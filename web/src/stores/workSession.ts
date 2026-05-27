@@ -24,5 +24,12 @@ export const useWorkSessionStore = defineStore('workSession', () => {
     today.value = await client.post('/api/work-sessions/clock-out', null, { params: { date: getToday() } }) as any
   }
 
-  return { today, fetchToday, clockIn, clockOut }
+  async function punch(clockedInAt: Date | null, clockedOutAt: Date | null) {
+    today.value = await client.put('/api/work-sessions', {
+      clockedInAt: clockedInAt?.toISOString() ?? null,
+      clockedOutAt: clockedOutAt?.toISOString() ?? null,
+    }, { params: { date: getToday() } }) as any
+  }
+
+  return { today, fetchToday, clockIn, clockOut, punch }
 })

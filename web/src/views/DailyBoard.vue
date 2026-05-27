@@ -17,6 +17,7 @@ import ClockStatus from '@/components/ClockStatus.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
+import PunchModal from '@/components/PunchModal.vue'
 import PastWeekView from '@/components/PastWeekView.vue'
 
 type ViewMode = 'daily' | 'weekly'
@@ -153,7 +154,7 @@ onMounted(() => {
       <BigThing v-if="!isPastWeek" />
 
       <CommandModal
-        :is-open="activeCommand !== null && activeCommand !== 'evaluate-my-week'"
+        :is-open="activeCommand === 'standup' || activeCommand === 'weekly'"
         :title="modalTitle"
         :command-type="activeCommand"
         :week-of="dailyTasks.weekOf"
@@ -162,6 +163,11 @@ onMounted(() => {
 
       <EvaluateWeekModal
         :is-open="activeCommand === 'evaluate-my-week'"
+        @close="activeCommand = null"
+      />
+
+      <PunchModal
+        :is-open="activeCommand === 'punch'"
         @close="activeCommand = null"
       />
 
