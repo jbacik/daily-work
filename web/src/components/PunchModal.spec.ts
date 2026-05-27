@@ -1,5 +1,5 @@
 import { setActivePinia, createPinia } from 'pinia'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import type { Mock } from 'vitest'
 
@@ -40,9 +40,12 @@ const sessionClockedIn = {
   createdAt: '2026-05-13T13:00:00Z',
 }
 
+let activeWrapper: VueWrapper | null = null
+
 async function mountModal(isOpen: boolean) {
   const wrapper = mount(PunchModal, { props: { isOpen }, attachTo: document.body })
-  await nextTick()
+  activeWrapper = wrapper
+  await flushPromises()
   return wrapper
 }
 
@@ -53,6 +56,8 @@ describe('PunchModal', () => {
   })
 
   afterEach(() => {
+    activeWrapper?.unmount()
+    activeWrapper = null
     document.body.innerHTML = ''
   })
 

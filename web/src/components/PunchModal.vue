@@ -56,6 +56,12 @@ function buildLocalDate(hhStr: string, mmStr: string): Date {
   return new Date(y!, mo! - 1, d!, hh, mm, 0, 0)
 }
 
+const DIGITS = /^\d{1,2}$/
+
+function strictInt(val: string): number {
+  return DIGITS.test(val) ? parseInt(val, 10) : NaN
+}
+
 function validate(): string | null {
   const sHH = startHH.value.trim()
   const sMM = startMM.value.trim()
@@ -69,18 +75,18 @@ function validate(): string | null {
   if (hasEnd && (eHH === '' || eMM === '')) return 'Enter both end hour and minute'
 
   if (hasStart) {
-    const h = parseInt(sHH, 10)
-    const m = parseInt(sMM, 10)
+    const h = strictInt(sHH)
+    const m = strictInt(sMM)
     if (isNaN(h) || h < 0 || h > 23) return 'Start hour must be 00–23'
     if (isNaN(m) || m < 0 || m > 59) return 'Start minute must be 00–59'
   }
 
   if (hasEnd) {
     if (!hasStart) return 'Cannot set end time without a start time'
-    const sh = parseInt(sHH, 10)
-    const sm = parseInt(sMM, 10)
-    const eh = parseInt(eHH, 10)
-    const em = parseInt(eMM, 10)
+    const sh = strictInt(sHH)
+    const sm = strictInt(sMM)
+    const eh = strictInt(eHH)
+    const em = strictInt(eMM)
     if (isNaN(eh) || eh < 0 || eh > 23) return 'End hour must be 00–23'
     if (isNaN(em) || em < 0 || em > 59) return 'End minute must be 00–59'
     if (eh < sh || (eh === sh && em <= sm)) return 'End time must be after start time'
@@ -108,8 +114,9 @@ async function handleSave() {
   emit('close')
 }
 
-watch(() => isOpen, (open) => {
+watch(() => isOpen, async (open) => {
   if (open) {
+    await store.fetchToday()
     populate()
     setTimeout(() => startHHRef.value?.focus(), 50)
   }
