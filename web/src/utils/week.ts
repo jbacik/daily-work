@@ -36,6 +36,14 @@ export function getDateForDayIndex(dayIndex: number, weekStart?: string): string
   return toLocalDateString(monday)
 }
 
+export function getPreviousWorkday(today: string = getToday()): string | null {
+  const d = parseLocalDate(today)
+  const dow = d.getDay()
+  if (dow === 0 || dow === 1 || dow === 6) return null // Sun, Mon, Sat — no lookback
+  d.setDate(d.getDate() - 1)
+  return toLocalDateString(d)
+}
+
 export function getRecentWeekStarts(count: number): string[] {
   const result: string[] = []
   const monday = parseLocalDate(getWeekStart())

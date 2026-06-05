@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useWorkSessionStore } from '@/stores/workSession'
+import ClockCeremonyModal from '@/components/ClockCeremonyModal.vue'
 
 const store = useWorkSessionStore()
+
+const ceremonyOpen = ref(false)
+const ceremonyMode = ref<'in' | 'out'>('in')
 
 const state = computed<'not-in' | 'in' | 'out'>(() => {
   const session = store.today
@@ -23,14 +27,19 @@ function formatTime(iso: string | null): string {
   return `${hh}:${mm}:${ss}`
 }
 
-async function handleClockIn() {
+function handleClockIn() {
   if (state.value !== 'not-in') return
-  await store.clockIn()
+  ceremonyMode.value = 'in'
+  ceremonyOpen.value = true
 }
 
 async function handleClockOut() {
   if (state.value !== 'in') return
   await store.clockOut()
+}
+
+function handleCeremonyClose() {
+  ceremonyOpen.value = false
 }
 
 onMounted(() => {
@@ -81,4 +90,10 @@ onMounted(() => {
     <span v-if="clockedInTime" class="text-muted-foreground">→</span>
     <span class="text-accent" data-testid="clock-status-out-time">{{ clockedOutTime }}</span>
   </div>
+
+  <ClockCeremonyModal
+    :is-open="ceremonyOpen"
+    :mode="ceremonyMode"
+    @close="handleCeremonyClose"
+  />
 </template>

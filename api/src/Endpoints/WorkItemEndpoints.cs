@@ -55,6 +55,7 @@ internal static class WorkItemEndpoints
 				Date = date,
 				WeekOf = weekOf,
 				SortOrder = sortOrder,
+				OriginalDate = date,
 			};
 			db.WorkItems.Add(item);
 			await db.SaveChangesAsync();
@@ -141,6 +142,35 @@ internal static class WorkItemEndpoints
 			db.WorkItems.Remove(item);
 			await db.SaveChangesAsync();
 			return Results.NoContent();
+		});
+
+		group.MapPatch("/{id}/move", async (AppDbContext db, int id, MoveWorkItemDto dto) =>
+		{
+			var item = await db.WorkItems.FindAsync(id);
+			if (item is null) return Results.NotFound();
+
+			if (item.Category == WorkItemCategory.SmallThing)
+			{
+				var count = await db.WorkItems.CountAsync(w =>
+					w.Date == dto.Date && w.Category == WorkItemCategory.SmallThing && w.Id != item.Id);
+				if (count >= 5)
+					return Results.Problem("Target day is full (5 SmallThings).", statusCode: 422);
+			}
+
+			item.Date = dto.Date;
+			item.WeekOf = ComputeWeekOf(dto.Date);
+			item.TimesMoved += 1;
+			await db.SaveChangesAsync();
+			return Results.Ok(item);
+		});
+
+		group.MapPatch("/{id}/skip", async (AppDbContext db, int id) =>
+		{
+			var item = await db.WorkItems.FindAsync(id);
+			if (item is null) return Results.NotFound();
+			item.IsSkipped = true;
+			await db.SaveChangesAsync();
+			return Results.Ok(item);
 		});
 
 		return group;

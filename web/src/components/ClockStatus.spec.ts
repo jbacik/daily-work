@@ -8,6 +8,7 @@ vi.mock('@/api/client', () => ({
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
 }))
@@ -31,6 +32,10 @@ const createMockSession = (overrides: Partial<WorkSession> = {}): WorkSession =>
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  document.body.innerHTML = ''
 })
 
 describe('ClockStatus', () => {
@@ -75,18 +80,20 @@ describe('ClockStatus', () => {
     expect(wrapper.get('[data-testid="clock-status-out-time"]').text()).toMatch(/^\d{2}:\d{2}:\d{2}$/)
   })
 
-  it('ClockStatus_CallsClockIn_WhenNotInClicked', async () => {
-    mockGet.mockResolvedValue('')
-    mockPost.mockResolvedValue(createMockSession({ clockedInAt: '2026-05-13T13:03:42.000Z' }))
+  it('ClockStatus_OpensCeremonyModal_WhenNotInClicked', async () => {
+    // First GET = workSession (null session), second GET = dailyTasks fetch (empty array)
+    mockGet.mockResolvedValueOnce('').mockResolvedValue([])
 
-    const wrapper = mount(ClockStatus)
+    const wrapper = mount(ClockStatus, { attachTo: document.body })
     await flushAsync()
 
     await wrapper.get('[data-testid="clock-status-not-in"]').trigger('click')
     await flushAsync()
 
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', null, { params: { date: expect.any(String) } })
-    expect(wrapper.find('[data-testid="clock-status-in"]').exists()).toBe(true)
+    // Modal Teleports to body — query from document
+    const modal = document.body.querySelector('[data-testid="ceremony-modal"]')
+    expect(modal).not.toBeNull()
+    expect(mockPost).not.toHaveBeenCalled()
   })
 
   it('ClockStatus_CallsClockOut_WhenClockOutClicked', async () => {

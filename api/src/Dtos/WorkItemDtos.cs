@@ -7,3 +7,5 @@ internal record UpdateWorkItemDto
 	public string? Title { get; init; }
 	public bool? IsDone { get; init; }
 }
+
+internal record MoveWorkItemDto(DateOnly Date);

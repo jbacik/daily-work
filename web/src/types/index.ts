@@ -6,6 +6,9 @@ export interface WorkItem {
   sortOrder: number
   date: string
   weekOf: string
+  originalDate: string
+  timesMoved: number
+  isSkipped: boolean
 }
 
 export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week' | 'punch'

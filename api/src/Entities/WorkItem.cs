@@ -11,5 +11,8 @@ internal class WorkItem
 	public int SortOrder { get; set; }
 	public DateOnly Date { get; set; }
 	public required string WeekOf { get; set; }
+	public DateOnly OriginalDate { get; set; }
+	public int TimesMoved { get; set; }
+	public bool IsSkipped { get; set; }
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
