@@ -46,6 +46,7 @@ async function handleLater(id: number) {
 }
 
 async function handleIgnore(id: number) {
+  delete errors.value[id]
   await store.skip(id)
 }
 </script>

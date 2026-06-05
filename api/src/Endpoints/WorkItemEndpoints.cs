@@ -149,6 +149,9 @@ internal static class WorkItemEndpoints
 			var item = await db.WorkItems.FindAsync(id);
 			if (item is null) return Results.NotFound();
 
+			if (dto.Date == default)
+				return Results.Problem("date is required.", statusCode: 400);
+
 			if (item.Category == WorkItemCategory.SmallThing)
 			{
 				var count = await db.WorkItems.CountAsync(w =>

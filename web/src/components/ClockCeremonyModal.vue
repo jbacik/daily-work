@@ -70,6 +70,8 @@ async function handleSubmit() {
   try {
     if (mode === 'in') {
       await workSessionStore.clockIn()
+    } else {
+      await workSessionStore.clockOut()
     }
     await finishAnimation()
     emit('close')
