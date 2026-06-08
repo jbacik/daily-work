@@ -23,8 +23,21 @@ If no ADRs exist yet, start at `ADR-0001`.
 
 ## Step 3 — Draft the ADR
 
-Fill in the template below from the current conversation context. Do not invent details — only record what was actually decided and discussed.
+Fill in the structure below from the current conversation context. Do not invent details — only record what was actually decided and discussed.
 
+An ADR can be as short as a single paragraph if the context, decision, and reasoning are clear. Only expand into sections when the trade-offs are genuinely complex and warrant the structure.
+
+**Minimal form** (use when straightforward):
+```
+# ADR-NNNN: {Title}
+
+**Date:** {today's date}
+**Status:** Accepted
+
+{One or two paragraphs: what situation forced the decision, what was decided, and why — including why alternatives were not chosen.}
+```
+
+**Full form** (use when trade-offs are complex):
 ```
 # ADR-NNNN: {Title}
 
