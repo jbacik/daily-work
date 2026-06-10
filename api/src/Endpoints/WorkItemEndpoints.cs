@@ -152,12 +152,17 @@ internal static class WorkItemEndpoints
 			if (dto.Date == default)
 				return Results.Problem("date is required.", statusCode: 400);
 
+			if (item.Date == dto.Date)
+				return Results.Ok(item);
+
 			if (item.Category == WorkItemCategory.SmallThing)
 			{
-				var count = await db.WorkItems.CountAsync(w =>
-					w.Date == dto.Date && w.Category == WorkItemCategory.SmallThing && w.Id != item.Id);
-				if (count >= 5)
+				var existing = await db.WorkItems
+					.Where(w => w.Date == dto.Date && w.Category == WorkItemCategory.SmallThing)
+					.ToListAsync();
+				if (existing.Count >= 5)
 					return Results.Problem("Target day is full (5 SmallThings).", statusCode: 422);
+				item.SortOrder = existing.Count == 0 ? 1 : existing.Max(w => w.SortOrder) + 1;
 			}
 
 			item.Date = dto.Date;

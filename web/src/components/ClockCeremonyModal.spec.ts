@@ -139,6 +139,7 @@ describe('ClockCeremonyModal', () => {
       null,
       { params: { date: '2026-04-08' } }
     )
+    vi.runAllTimers()
     vi.useRealTimers()
   })
 

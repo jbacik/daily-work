@@ -48,7 +48,7 @@ const slotLabel = computed(() => {
   return 'insert card'
 })
 
-async function runAnimation() {
+function runAnimation() {
   animState.value = 'running'
 }
 
