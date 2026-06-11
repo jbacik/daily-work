@@ -42,7 +42,13 @@ async function handleToday(id: number) {
 
 async function handleLater(id: number) {
   delete errors.value[id]
-  await store.move(id, laterDate)
+  try {
+    await store.move(id, laterDate)
+  } catch (e: any) {
+    if (e?.response?.status === 422) {
+      errors.value[id] = 'That day is full'
+    }
+  }
 }
 
 async function handleIgnore(id: number) {

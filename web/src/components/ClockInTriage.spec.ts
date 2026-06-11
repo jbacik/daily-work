@@ -142,4 +142,21 @@ describe('ClockInTriage', () => {
     expect(wrapper.find('[data-testid="item-error-6"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="item-error-6"]').text()).toContain('Today is full')
   })
+
+  it('ClockInTriage_ShowsInlineError_WhenLaterMoveReturns422', async () => {
+    const item = createMockItem({ id: 7, title: 'Full later day test' })
+    const error = Object.assign(new Error('422'), { response: { status: 422 } })
+    mockPatch.mockRejectedValue(error)
+
+    const wrapper = mount(ClockInTriage, { props: { items: [item] } })
+
+    await wrapper.get('[data-testid="later-btn-7"]').trigger('click')
+    await Promise.resolve()
+    await nextTick()
+    await Promise.resolve()
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="item-error-7"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="item-error-7"]').text()).toContain('That day is full')
+  })
 })

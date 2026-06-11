@@ -119,12 +119,14 @@ async function finishAnimation() {
 }
 
 function cancelAnimation() {
-  animToken++
+  const token = ++animToken
   scanning.value = false
   litUpTo.value = -1
   animState.value = 'failed'
   cardState.value = 'cancelling'
   setTimeout(() => {
+    // A resubmit within the 250ms ease-out owns the animation now
+    if (token !== animToken) return
     animState.value = 'idle'
     cardState.value = ''
   }, 250)

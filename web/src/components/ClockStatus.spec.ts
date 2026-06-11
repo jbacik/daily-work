@@ -1,7 +1,11 @@
-import { mount } from '@vue/test-utils'
+import { mount, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import type { Mock } from 'vitest'
+
+// ClockStatus always renders ClockCeremonyModal, which registers a global
+// window keydown listener on mount — unmount wrappers after each test
+enableAutoUnmount(afterEach)
 
 vi.mock('@/api/client', () => ({
   default: {

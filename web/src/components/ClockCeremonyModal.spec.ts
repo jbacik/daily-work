@@ -1,7 +1,11 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import type { Mock } from 'vitest'
+
+// The modal registers a global window keydown listener on mount —
+// unmount wrappers after each test so listeners don't leak across tests
+enableAutoUnmount(afterEach)
 
 vi.mock('@/api/client', () => ({
   default: {
