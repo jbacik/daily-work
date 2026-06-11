@@ -95,6 +95,18 @@ describe('ClockCeremonyModal', () => {
     expect(q('ceremony-header')?.textContent).toContain('clock-out.ceremony')
   })
 
+  it('ClockCeremonyModal_RendersPunchCardIdle_WhenOpened', async () => {
+    mount(ClockCeremonyModal, {
+      props: { isOpen: true, mode: 'in' },
+      attachTo: document.body,
+    })
+    await nextTick()
+
+    expect(q('punch-card')).not.toBeNull()
+    expect(q('scan-beam')).toBeNull()
+    expect(q('slot-label')?.textContent).toContain('insert card')
+  })
+
   it('ClockCeremonyModal_EmitsClose_WhenExitButtonClicked', async () => {
     const wrapper = mount(ClockCeremonyModal, {
       props: { isOpen: true, mode: 'in' },
@@ -139,7 +151,7 @@ describe('ClockCeremonyModal', () => {
       null,
       { params: { date: '2026-04-08' } }
     )
-    vi.runAllTimers()
+    await vi.runAllTimersAsync()
     vi.useRealTimers()
   })
 
@@ -155,8 +167,7 @@ describe('ClockCeremonyModal', () => {
 
     q('submit-btn')?.click()
     await flushPromises()
-    vi.runAllTimers()
-    await flushPromises()
+    await vi.runAllTimersAsync()
 
     expect(wrapper.emitted('close')).toBeTruthy()
     vi.useRealTimers()

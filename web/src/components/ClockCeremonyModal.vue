@@ -25,6 +25,17 @@ const dailyTasksStore = useDailyTasksStore()
 const busy = ref(false)
 const terminalError = ref('')
 const animState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
+const cardState = ref<'' | 'inserting' | 'ejecting' | 'cancelling'>('')
+const scanning = ref(false)
+const scanPass = ref(0)
+const litUpTo = ref(-1)
+const isFlashing = ref(false)
+// Bumped to abort any in-flight animation sequence (retry, cancel, reopen)
+let animToken = 0
+let runPromise: Promise<void> | null = null
+
+const HOLE_PATTERN = [1,0,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,
+                      1,0,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1,1,0,1,0,0,1]
 
 const today = getToday()
 
@@ -43,30 +54,88 @@ const triageItems = computed(() => {
 })
 
 const slotLabel = computed(() => {
-  if (animState.value === 'running') return 'scanning...'
+  // While running/failed the card occupies the slot — no label
+  if (animState.value === 'running' || animState.value === 'failed') return ''
   if (animState.value === 'done') return '✓ punched'
   return 'insert card'
 })
 
-function runAnimation() {
+const employeeNameFormatted = computed(() => {
+  const parts = EMPLOYEE_NAME.trim().split(' ')
+  const last = parts.pop()!.toUpperCase()
+  const first = parts.join(' ').toUpperCase()
+  return `${last}, ${first} · ${COMPANY}`
+})
+
+const cardStyle = computed(() => {
+  switch (cardState.value) {
+    case 'inserting':
+      return { transform: 'translateY(-50%) translateX(0)', transition: 'transform 0.65s cubic-bezier(0.3, 0, 0.2, 1)' }
+    case 'ejecting':
+      return { transform: 'translateY(-50%) translateX(-120vw)', transition: 'transform 0.45s cubic-bezier(0.6, 0, 1, 0.4)' }
+    case 'cancelling':
+      // Decision 20: ~250ms ease-out, card returns to slot
+      return { transform: 'translateY(-50%) translateX(120vw)', transition: 'transform 0.25s ease-out' }
+    default:
+      return { transform: 'translateY(-50%) translateX(120vw)', transition: 'none' }
+  }
+})
+
+const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+
+async function runAnimation() {
+  const token = ++animToken
   animState.value = 'running'
+  cardState.value = ''
+  litUpTo.value = -1
+  await wait(40)
+  if (token !== animToken) return
+  cardState.value = 'inserting'
+  await wait(680)
+  if (token !== animToken) return
+  scanning.value = true
+  for (let pass = 0; pass < 3; pass++) {
+    scanPass.value++
+    litUpTo.value = Math.floor((pass / 2) * HOLE_PATTERN.length)
+    await wait(200)
+    if (token !== animToken) return
+  }
+  scanning.value = false
+  litUpTo.value = -1
 }
 
 async function finishAnimation() {
+  // Optimistic timing (decision 12): save resolved while the card was
+  // inserting/scanning — let the run sequence complete before ejecting
+  if (runPromise) await runPromise
+  animToken++
+  scanning.value = false
+  litUpTo.value = -1
   animState.value = 'done'
-  await new Promise<void>(r => setTimeout(r, 600))
+  cardState.value = 'ejecting'
+  await wait(480)
+  isFlashing.value = true
+  await wait(220)
 }
 
 function cancelAnimation() {
+  animToken++
+  scanning.value = false
+  litUpTo.value = -1
   animState.value = 'failed'
-  setTimeout(() => { animState.value = 'idle' }, 250)
+  cardState.value = 'cancelling'
+  setTimeout(() => {
+    animState.value = 'idle'
+    cardState.value = ''
+  }, 250)
 }
 
 async function handleSubmit() {
   if (busy.value) return
   busy.value = true
   terminalError.value = ''
-  runAnimation()
+  isFlashing.value = false
+  runPromise = runAnimation()
   try {
     if (mode === 'in') {
       await workSessionStore.clockIn()
@@ -109,8 +178,13 @@ function handleKeyDown(e: KeyboardEvent) {
 
 watch(() => isOpen, async (open) => {
   if (open) {
+    animToken++
     terminalError.value = ''
     animState.value = 'idle'
+    cardState.value = ''
+    scanning.value = false
+    litUpTo.value = -1
+    isFlashing.value = false
     busy.value = false
     await dailyTasksStore.fetch()
   }
@@ -140,20 +214,56 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
         </div>
 
         <!-- Body -->
-        <div class="flex-1 bg-background px-8 py-7 flex flex-col gap-6 overflow-y-auto">
+        <div
+          class="flex-1 bg-background px-8 py-7 flex flex-col gap-6 overflow-y-auto"
+          :class="{ 'animate-success-flash': isFlashing }"
+        >
           <!-- Punch card slot -->
           <div class="flex flex-col" data-testid="punch-card-slot">
             <div class="h-3 opacity-35" style="background: repeating-linear-gradient(90deg, var(--color-muted-foreground) 0px, var(--color-muted-foreground) 2px, transparent 2px, transparent 6px);"></div>
-            <div class="h-10 flex items-center px-3.5 bg-card border-y border-border">
-              <span
-                class="text-muted-foreground text-xs uppercase tracking-widest"
-                :class="{ 'animate-pulse': animState === 'running' }"
-                data-testid="slot-label"
-              >
+            <div class="relative h-12 flex items-center px-3.5 bg-card border-y border-border overflow-hidden">
+              <span class="text-muted-foreground text-xs uppercase tracking-widest" data-testid="slot-label">
                 {{ slotLabel }}
               </span>
               <span class="flex-1" />
               <span class="text-muted-foreground text-xs tracking-widest">{{ EMPLOYEE_NAME }} · {{ EMPLOYEE_ID }} · {{ COMPANY }}</span>
+
+              <!-- Scan beam -->
+              <div
+                v-if="scanning"
+                :key="scanPass"
+                class="absolute inset-y-0 w-[3px] bg-accent z-30 animate-scan-sweep"
+                data-testid="scan-beam"
+              ></div>
+
+              <!-- Punch card -->
+              <div class="absolute inset-0 pointer-events-none z-20">
+                <div
+                  class="absolute top-1/2 left-[60px] w-[420px] h-10 bg-card border border-border flex items-stretch overflow-hidden"
+                  :style="cardStyle"
+                  data-testid="punch-card"
+                >
+                  <div class="w-2.5 bg-background border-r border-border shrink-0"></div>
+                  <div class="flex flex-col justify-between px-2 py-[3px] flex-1 overflow-hidden">
+                    <div class="text-[9px] tracking-wider text-accent whitespace-nowrap">
+                      EMP-ID: {{ EMPLOYEE_ID }} · {{ COMPANY }} · 2026
+                    </div>
+                    <div class="flex gap-[3px] items-center">
+                      <div
+                        v-for="(punched, i) in HOLE_PATTERN"
+                        :key="i"
+                        class="w-[5px] h-2 border shrink-0 transition-colors"
+                        :class="punched
+                          ? (litUpTo >= i ? 'bg-accent border-accent' : 'bg-foreground border-foreground')
+                          : 'bg-transparent border-border'"
+                      ></div>
+                    </div>
+                    <div class="text-[9px] text-muted-foreground whitespace-nowrap tracking-wide">
+                      {{ employeeNameFormatted }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="h-3 opacity-35" style="background: repeating-linear-gradient(90deg, var(--color-muted-foreground) 0px, var(--color-muted-foreground) 2px, transparent 2px, transparent 6px);"></div>
           </div>
