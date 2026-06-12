@@ -26,10 +26,23 @@ export interface ReadWatchItem {
   date: string
 }
 
+export interface WorkSessionReflections {
+  wins: string | null
+  whines: string | null
+  valueAdds: string | null
+}
+
+export interface ReflectionsInput {
+  wins?: string
+  whines?: string
+  valueAdds?: string
+}
+
 export interface WorkSession {
   id: number
   date: string
   clockedInAt: string | null
   clockedOutAt: string | null
   createdAt: string
+  reflections: WorkSessionReflections | null
 }

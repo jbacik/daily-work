@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import client from '@/api/client'
-import type { WorkSession } from '@/types'
+import type { ReflectionsInput, WorkSession } from '@/types'
 import { getToday } from '@/utils/week'
 
 export const useWorkSessionStore = defineStore('workSession', () => {
@@ -31,5 +31,16 @@ export const useWorkSessionStore = defineStore('workSession', () => {
     }, { params: { date: getToday() } }) as any
   }
 
-  return { today, fetchToday, clockIn, clockOut, punch }
+  async function clockOutWithReflections(reflections: ReflectionsInput | null) {
+    await clockOut()
+    if (reflections && Object.values(reflections).some(v => v?.trim())) {
+      today.value = await client.put('/api/work-sessions', {
+        clockedInAt: today.value?.clockedInAt ?? null,
+        clockedOutAt: today.value?.clockedOutAt ?? null,
+        reflections,
+      }, { params: { date: getToday() } }) as any
+    }
+  }
+
+  return { today, fetchToday, clockIn, clockOut, punch, clockOutWithReflections }
 })

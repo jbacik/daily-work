@@ -29,6 +29,7 @@ import type { WorkSession } from '@/types'
 
 const mockGet = (client as any).get as Mock
 const mockPost = (client as any).post as Mock
+const mockPut = (client as any).put as Mock
 const mockGetToday = getToday as Mock
 const mockGetPreviousWorkday = getPreviousWorkday as Mock
 
@@ -43,6 +44,7 @@ const createMockSession = (overrides: Partial<WorkSession> = {}): WorkSession =>
   clockedInAt: null,
   clockedOutAt: null,
   createdAt: '2026-04-08T00:00:00Z',
+  reflections: null,
   ...overrides,
 })
 
@@ -226,5 +228,107 @@ describe('ClockCeremonyModal', () => {
     await nextTick()
 
     expect(wrapper.emitted('close')).toBeFalsy()
+  })
+
+  it('ClockCeremonyModal_RendersOutTriageAndReflection_WhenModeIsOut', async () => {
+    mount(ClockCeremonyModal, {
+      props: { isOpen: true, mode: 'out' },
+      attachTo: document.body,
+    })
+    await nextTick()
+
+    expect(q('clock-out-triage')).not.toBeNull()
+    expect(q('daily-reflection')).not.toBeNull()
+    // Clock-in triage should not appear in out mode
+    expect(q('capacity-meter')).toBeNull()
+  })
+
+  it('ClockCeremonyModal_ClocksOut_WhenSubmitInOutMode', async () => {
+    mockPost.mockResolvedValue(createMockSession({
+      clockedInAt: '2026-04-08T09:00:00Z',
+      clockedOutAt: '2026-04-08T17:00:00Z',
+    }))
+    vi.useFakeTimers()
+
+    mount(ClockCeremonyModal, {
+      props: { isOpen: true, mode: 'out' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    q('submit-btn')?.click()
+    await flushPromises()
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/work-sessions/clock-out',
+      null,
+      { params: { date: '2026-04-08' } }
+    )
+    // No reflections entered → no PUT
+    expect(mockPut).not.toHaveBeenCalled()
+    await vi.runAllTimersAsync()
+    vi.useRealTimers()
+  })
+
+  it('ClockCeremonyModal_SavesReflections_WhenSubmitInOutModeWithWins', async () => {
+    mockPost.mockResolvedValue(createMockSession({
+      clockedInAt: '2026-04-08T09:00:00Z',
+      clockedOutAt: '2026-04-08T17:00:00Z',
+    }))
+    mockPut.mockResolvedValue(createMockSession({
+      clockedInAt: '2026-04-08T09:00:00Z',
+      clockedOutAt: '2026-04-08T17:00:00Z',
+      reflections: { wins: 'Shipped it', whines: null, valueAdds: null },
+    }))
+    vi.useFakeTimers()
+
+    mount(ClockCeremonyModal, {
+      props: { isOpen: true, mode: 'out' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    const wins = q('reflect-wins') as HTMLTextAreaElement
+    wins.value = 'Shipped it'
+    wins.dispatchEvent(new Event('input'))
+    await flushPromises()
+
+    q('submit-btn')?.click()
+    await flushPromises()
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/work-sessions/clock-out',
+      null,
+      { params: { date: '2026-04-08' } }
+    )
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      expect.objectContaining({ reflections: expect.objectContaining({ wins: 'Shipped it' }) }),
+      { params: { date: '2026-04-08' } }
+    )
+    await vi.runAllTimersAsync()
+    vi.useRealTimers()
+  })
+
+  it('ClockCeremonyModal_PreservesReflections_WhenClockOutFails', async () => {
+    const error = Object.assign(new Error('500'), { response: { status: 500 } })
+    mockPost.mockRejectedValue(error)
+
+    mount(ClockCeremonyModal, {
+      props: { isOpen: true, mode: 'out' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    const wins = q('reflect-wins') as HTMLTextAreaElement
+    wins.value = 'Keep me'
+    wins.dispatchEvent(new Event('input'))
+    await flushPromises()
+
+    q('submit-btn')?.click()
+    await flushPromises()
+
+    expect(q('terminal-error')?.textContent).toContain('clock-out failed: HTTP 500')
+    expect((q('reflect-wins') as HTMLTextAreaElement).value).toBe('Keep me')
   })
 })

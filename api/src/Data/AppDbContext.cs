@@ -45,6 +45,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 		modelBuilder.Entity<WorkSession>(e =>
 		{
 			e.HasIndex(s => s.Date).IsUnique();
+			e.OwnsOne(s => s.Reflections, b => b.ToJson());
 		});
 	}
 }

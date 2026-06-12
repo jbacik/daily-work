@@ -7,4 +7,12 @@ internal class WorkSession
 	public DateTime? ClockedInAt { get; set; }
 	public DateTime? ClockedOutAt { get; set; }
 	public DateTime CreatedAt { get; set; }
+	public WorkSessionReflections? Reflections { get; set; }
+}
+
+internal record WorkSessionReflections
+{
+	public string? Wins { get; init; }
+	public string? Whines { get; init; }
+	public string? ValueAdds { get; init; }
 }

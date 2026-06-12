@@ -96,6 +96,19 @@ internal static class WorkSessionEndpoints
 				session.ClockedOutAt = dto.ClockedOutAt;
 			}
 
+			if (dto.Reflections is not null)
+			{
+				var wins = dto.Reflections.Wins?.Trim();
+				var whines = dto.Reflections.Whines?.Trim();
+				var valueAdds = dto.Reflections.ValueAdds?.Trim();
+				session.Reflections =
+					string.IsNullOrWhiteSpace(wins) &&
+					string.IsNullOrWhiteSpace(whines) &&
+					string.IsNullOrWhiteSpace(valueAdds)
+						? null
+						: new WorkSessionReflections { Wins = wins, Whines = whines, ValueAdds = valueAdds };
+			}
+
 			await db.SaveChangesAsync();
 			return Results.Ok(session);
 		});

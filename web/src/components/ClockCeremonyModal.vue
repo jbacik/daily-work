@@ -4,6 +4,9 @@ import type { AxiosError } from 'axios'
 import { useWorkSessionStore } from '@/stores/workSession'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import ClockInTriage from '@/components/ClockInTriage.vue'
+import ClockOutTriage from '@/components/ClockOutTriage.vue'
+import DailyReflection from '@/components/DailyReflection.vue'
+import type { ReflectionsInput } from '@/types'
 import { getToday, getPreviousWorkday } from '@/utils/week'
 
 const EMPLOYEE_NAME = 'Jared Bacik'
@@ -24,6 +27,7 @@ const dailyTasksStore = useDailyTasksStore()
 
 const busy = ref(false)
 const terminalError = ref('')
+const reflections = ref<ReflectionsInput | null>(null)
 const animState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
 const cardState = ref<'' | 'inserting' | 'ejecting' | 'cancelling'>('')
 const scanning = ref(false)
@@ -52,6 +56,15 @@ const triageItems = computed(() => {
     !t.isSkipped
   )
 })
+
+const outTriageItems = computed(() =>
+  dailyTasksStore.items.filter(t =>
+    t.category === 'SmallThing' &&
+    t.date === today &&
+    !t.isDone &&
+    !t.isSkipped
+  )
+)
 
 const slotLabel = computed(() => {
   // While running/failed the card occupies the slot — no label
@@ -142,7 +155,7 @@ async function handleSubmit() {
     if (mode === 'in') {
       await workSessionStore.clockIn()
     } else {
-      await workSessionStore.clockOut()
+      await workSessionStore.clockOutWithReflections(reflections.value)
     }
     await finishAnimation()
     emit('close')
@@ -188,6 +201,7 @@ watch(() => isOpen, async (open) => {
     litUpTo.value = -1
     isFlashing.value = false
     busy.value = false
+    reflections.value = null
     await dailyTasksStore.fetch()
   }
 }, { immediate: true })
@@ -275,6 +289,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             v-if="mode === 'in'"
             :items="triageItems"
           />
+
+          <!-- Triage + reflection (clock-out mode) -->
+          <template v-else>
+            <ClockOutTriage :items="outTriageItems" />
+            <DailyReflection @update:reflections="reflections = $event" />
+          </template>
 
           <!-- Terminal error -->
           <div
