@@ -353,6 +353,31 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	}
 
 	[Fact]
+	public async Task PutPunch_NullsBlankFields_WhenSomeProvided()
+	{
+		// Arrange — the web client always sends "" for untouched textareas
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "Shipped it", Whines = "", ValueAdds = "   " }
+		};
+		await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Act
+		var response = await _client.GetAsync(GetTodayUrl);
+
+		// Assert — blank fields persist as null, not empty strings
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Shipped it");
+		session.Reflections.Whines.ShouldBeNull();
+		session.Reflections.ValueAdds.ShouldBeNull();
+	}
+
+	[Fact]
 	public async Task PutPunch_LeavesReflectionsNull_WhenOmitted()
 	{
 		// Arrange
