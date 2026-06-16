@@ -66,6 +66,13 @@ const outTriageItems = computed(() =>
   )
 )
 
+// Existing saved draft, used to prefill the reflection textareas on reopen.
+const existingReflections = computed<ReflectionsInput | null>(() => {
+  const r = workSessionStore.today?.reflections
+  if (!r) return null
+  return { wins: r.wins ?? '', whines: r.whines ?? '', valueAdds: r.valueAdds ?? '' }
+})
+
 const slotLabel = computed(() => {
   // While running/failed the card occupies the slot — no label
   if (animState.value === 'running' || animState.value === 'failed') return ''
@@ -167,6 +174,25 @@ async function handleSubmit() {
   }
 }
 
+// [S]ave and Close (out mode): persist the reflection draft without clocking out,
+// then close. No punch animation — this isn't a timestamp commit.
+async function handleSaveAndClose() {
+  if (busy.value || mode !== 'out') return
+  busy.value = true
+  terminalError.value = ''
+  try {
+    if (reflections.value) {
+      await workSessionStore.saveReflections(reflections.value)
+    }
+    emit('close')
+  } catch (e) {
+    const status = (e as AxiosError).response?.status ?? '?'
+    terminalError.value = `! save failed: HTTP ${status}`
+    busy.value = false
+  }
+}
+
+// [E]xit: close and change nothing — discards in-memory reflection edits.
 function handleClose() {
   if (busy.value) return
   emit('close')
@@ -185,6 +211,9 @@ function handleKeyDown(e: KeyboardEvent) {
   if (key === 'c') {
     e.preventDefault()
     handleSubmit()
+  } else if (key === 's' && mode === 'out') {
+    e.preventDefault()
+    handleSaveAndClose()
   } else if (key === 'e') {
     e.preventDefault()
     handleClose()
@@ -293,7 +322,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
           <!-- Triage + reflection (clock-out mode) -->
           <template v-else>
             <ClockOutTriage :items="outTriageItems" />
-            <DailyReflection @update:reflections="reflections = $event" />
+            <DailyReflection
+              :initial="existingReflections"
+              @update:reflections="reflections = $event"
+            />
           </template>
 
           <!-- Terminal error -->
@@ -320,6 +352,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             <span class="text-primary font-bold">C</span>
             <span class="text-accent">]</span>
             <span class="text-muted-foreground">lock {{ mode === 'in' ? 'In' : 'Out' }}</span>
+          </button>
+          <button
+            v-if="mode === 'out'"
+            type="button"
+            class="font-mono text-sm hover:opacity-75 transition-opacity disabled:opacity-40"
+            :disabled="busy"
+            data-testid="save-btn"
+            @click="handleSaveAndClose"
+          >
+            <span class="text-accent">[</span>
+            <span class="text-primary font-bold">S</span>
+            <span class="text-accent">]</span>
+            <span class="text-muted-foreground">ave and Close</span>
           </button>
           <button
             type="button"

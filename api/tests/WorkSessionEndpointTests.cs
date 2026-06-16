@@ -394,6 +394,29 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	}
 
 	[Fact]
+	public async Task PutPunch_PersistsReflectionsWithoutClockOut_WhenClockedOutAtNull()
+	{
+		// Arrange — saving a reflection draft mid-session (clocked in, not yet out)
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow,
+			ClockedOutAt = (DateTime?)null,
+			Reflections = new { Wins = "Mid-day draft", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert — reflections persisted, session still not clocked out
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.ClockedOutAt.ShouldBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Mid-day draft");
+	}
+
+	[Fact]
 	public async Task GetToday_ReturnsReflections_WhenPresent()
 	{
 		// Arrange

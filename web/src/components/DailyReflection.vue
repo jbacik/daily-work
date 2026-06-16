@@ -2,13 +2,19 @@
 import { ref, watch } from 'vue'
 import type { ReflectionsInput } from '@/types'
 
+const { initial = null } = defineProps<{
+  initial?: ReflectionsInput | null
+}>()
+
 const emit = defineEmits<{
   'update:reflections': [value: ReflectionsInput]
 }>()
 
-const wins = ref('')
-const whines = ref('')
-const valueAdds = ref('')
+// Seed from an existing draft so reopening the ceremony restores in-progress text.
+// The modal remounts this component on each open, so reading `initial` once is enough.
+const wins = ref(initial?.wins ?? '')
+const whines = ref(initial?.whines ?? '')
+const valueAdds = ref(initial?.valueAdds ?? '')
 
 // Decision 17: no char counter / shortcut — plain textareas, v-model up to parent.
 watch([wins, whines, valueAdds], () => {

@@ -31,6 +31,16 @@ describe('DailyReflection', () => {
     expect(emitted![emitted!.length - 1]).toEqual([{ wins: 'Shipped the feature', whines: '', valueAdds: '' }])
   })
 
+  it('DailyReflection_PrefillsTextareas_WhenInitialProvided', () => {
+    const wrapper = mount(DailyReflection, {
+      props: { initial: { wins: 'Saved win', whines: 'Saved whine', valueAdds: '' } },
+    })
+
+    expect((wrapper.get('[data-testid="reflect-wins"]').element as HTMLTextAreaElement).value).toBe('Saved win')
+    expect((wrapper.get('[data-testid="reflect-whines"]').element as HTMLTextAreaElement).value).toBe('Saved whine')
+    expect((wrapper.get('[data-testid="reflect-value-adds"]').element as HTMLTextAreaElement).value).toBe('')
+  })
+
   it('DailyReflection_EmitsAllThreeFields_WhenAllFilled', async () => {
     const wrapper = mount(DailyReflection)
 
