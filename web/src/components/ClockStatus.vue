@@ -33,9 +33,10 @@ function handleClockIn() {
   ceremonyOpen.value = true
 }
 
-async function handleClockOut() {
+function handleClockOut() {
   if (state.value !== 'in') return
-  await store.clockOut()
+  ceremonyMode.value = 'out'
+  ceremonyOpen.value = true
 }
 
 function handleCeremonyClose() {

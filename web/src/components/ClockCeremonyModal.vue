@@ -4,6 +4,9 @@ import type { AxiosError } from 'axios'
 import { useWorkSessionStore } from '@/stores/workSession'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import ClockInTriage from '@/components/ClockInTriage.vue'
+import ClockOutTriage from '@/components/ClockOutTriage.vue'
+import DailyReflection from '@/components/DailyReflection.vue'
+import type { ReflectionsInput } from '@/types'
 import { getToday, getPreviousWorkday } from '@/utils/week'
 
 const EMPLOYEE_NAME = 'Jared Bacik'
@@ -24,6 +27,7 @@ const dailyTasksStore = useDailyTasksStore()
 
 const busy = ref(false)
 const terminalError = ref('')
+const reflections = ref<ReflectionsInput | null>(null)
 const animState = ref<'idle' | 'running' | 'done' | 'failed'>('idle')
 const cardState = ref<'' | 'inserting' | 'ejecting' | 'cancelling'>('')
 const scanning = ref(false)
@@ -51,6 +55,22 @@ const triageItems = computed(() => {
     !t.isDone &&
     !t.isSkipped
   )
+})
+
+const outTriageItems = computed(() =>
+  dailyTasksStore.items.filter(t =>
+    t.category === 'SmallThing' &&
+    t.date === today &&
+    !t.isDone &&
+    !t.isSkipped
+  )
+)
+
+// Existing saved draft, used to prefill the reflection textareas on reopen.
+const existingReflections = computed<ReflectionsInput | null>(() => {
+  const r = workSessionStore.today?.reflections
+  if (!r) return null
+  return { wins: r.wins ?? '', whines: r.whines ?? '', valueAdds: r.valueAdds ?? '' }
 })
 
 const slotLabel = computed(() => {
@@ -142,7 +162,7 @@ async function handleSubmit() {
     if (mode === 'in') {
       await workSessionStore.clockIn()
     } else {
-      await workSessionStore.clockOut()
+      await workSessionStore.clockOutWithReflections(reflections.value)
     }
     await finishAnimation()
     emit('close')
@@ -154,6 +174,25 @@ async function handleSubmit() {
   }
 }
 
+// [S]ave and Close (out mode): persist the reflection draft without clocking out,
+// then close. No punch animation — this isn't a timestamp commit.
+async function handleSaveAndClose() {
+  if (busy.value || mode !== 'out') return
+  busy.value = true
+  terminalError.value = ''
+  try {
+    if (reflections.value) {
+      await workSessionStore.saveReflections(reflections.value)
+    }
+    emit('close')
+  } catch (e) {
+    const status = (e as AxiosError).response?.status ?? '?'
+    terminalError.value = `! save failed: HTTP ${status}`
+    busy.value = false
+  }
+}
+
+// [E]xit: close and change nothing — discards in-memory reflection edits.
 function handleClose() {
   if (busy.value) return
   emit('close')
@@ -172,6 +211,9 @@ function handleKeyDown(e: KeyboardEvent) {
   if (key === 'c') {
     e.preventDefault()
     handleSubmit()
+  } else if (key === 's' && mode === 'out') {
+    e.preventDefault()
+    handleSaveAndClose()
   } else if (key === 'e') {
     e.preventDefault()
     handleClose()
@@ -188,6 +230,7 @@ watch(() => isOpen, async (open) => {
     litUpTo.value = -1
     isFlashing.value = false
     busy.value = false
+    reflections.value = null
     await dailyTasksStore.fetch()
   }
 }, { immediate: true })
@@ -276,6 +319,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             :items="triageItems"
           />
 
+          <!-- Triage + reflection (clock-out mode) -->
+          <template v-else>
+            <ClockOutTriage :items="outTriageItems" />
+            <DailyReflection
+              :initial="existingReflections"
+              @update:reflections="reflections = $event"
+            />
+          </template>
+
           <!-- Terminal error -->
           <div
             v-if="terminalError"
@@ -300,6 +352,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             <span class="text-primary font-bold">C</span>
             <span class="text-accent">]</span>
             <span class="text-muted-foreground">lock {{ mode === 'in' ? 'In' : 'Out' }}</span>
+          </button>
+          <button
+            v-if="mode === 'out'"
+            type="button"
+            class="font-mono text-sm hover:opacity-75 transition-opacity disabled:opacity-40"
+            :disabled="busy"
+            data-testid="save-btn"
+            @click="handleSaveAndClose"
+          >
+            <span class="text-accent">[</span>
+            <span class="text-primary font-bold">S</span>
+            <span class="text-accent">]</span>
+            <span class="text-muted-foreground">ave and Close</span>
           </button>
           <button
             type="button"
