@@ -284,7 +284,7 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	}
 
 	[Fact]
-	public async Task PutPunch_StoresReflectionsAsJsonb_WithKeyConstraint()
+	public async Task PutPunch_RoundTripsAllReflectionFieldsAsJsonb()
 	{
 		// Arrange
 		var payload = new
