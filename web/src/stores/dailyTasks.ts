@@ -71,5 +71,17 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
     next.sortOrder = temp
   }
 
-  return { items, weekOf, currentDay, getTasksForDay, fetch, create, update, remove, moveUp, moveDown }
+  async function move(id: number, date: string): Promise<void> {
+    const updated: WorkItem = await client.patch(`/api/work-items/${id}/move`, { date }) as any
+    const idx = items.value.findIndex(t => t.id === id)
+    if (idx !== -1) items.value[idx] = updated
+  }
+
+  async function skip(id: number): Promise<void> {
+    const updated: WorkItem = await client.patch(`/api/work-items/${id}/skip`) as any
+    const idx = items.value.findIndex(t => t.id === id)
+    if (idx !== -1) items.value[idx] = updated
+  }
+
+  return { items, weekOf, currentDay, getTasksForDay, fetch, create, update, remove, moveUp, moveDown, move, skip }
 })

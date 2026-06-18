@@ -227,4 +227,104 @@ public class WorkItemEndpointTests : IClassFixture<CustomWebApplicationFactory>,
 		moved.ShouldNotBeNull();
 		moved.SortOrder.ShouldBe(originalSortOrder);
 	}
+
+	[Fact]
+	public async Task PostWorkItem_SetsOriginalDateToDate_WhenCreated()
+	{
+		var date = new DateOnly(2020, 1, 13);
+		var payload = new { Title = "OriginalDate test", Category = "SmallThing", Date = date.ToString("O", System.Globalization.CultureInfo.InvariantCulture) };
+
+		var response = await _client.PostAsJsonAsync("/api/work-items", payload);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var item = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.OriginalDate.ShouldBe(date);
+	}
+
+	[Fact]
+	public async Task PatchMove_UpdatesDateAndIncrementsTimesMoved_WhenValid()
+	{
+		var sourceDate = new DateOnly(2020, 1, 13);
+		var targetDate = new DateOnly(2020, 1, 14);
+		var r = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Move valid test", Category = "SmallThing", Date = sourceDate.ToString("O", System.Globalization.CultureInfo.InvariantCulture) });
+		var item = await r.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		item.ShouldNotBeNull();
+
+		var response = await _client.PatchAsJsonAsync($"/api/work-items/{item.Id}/move", new { Date = "2020-01-14" });
+
+		response.EnsureSuccessStatusCode();
+		var moved = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		moved.ShouldNotBeNull();
+		moved.Date.ShouldBe(targetDate);
+		moved.TimesMoved.ShouldBe(1);
+	}
+
+	[Fact]
+	public async Task PatchMove_Returns422_WhenTargetDayHasFiveSmallThings()
+	{
+		var targetDate = "2020-01-14";
+		var sourceDate = "2020-01-13";
+
+		for (var i = 0; i < 5; i++)
+			await _client.PostAsJsonAsync("/api/work-items", new { Title = $"Full day {i}", Category = "SmallThing", Date = targetDate });
+
+		var r = await _client.PostAsJsonAsync("/api/work-items", new { Title = "To be moved", Category = "SmallThing", Date = sourceDate });
+		var item = await r.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		item.ShouldNotBeNull();
+
+		var response = await _client.PatchAsJsonAsync($"/api/work-items/{item.Id}/move", new { Date = targetDate });
+
+		response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+	}
+
+	[Fact]
+	public async Task PatchMove_Returns404_WhenItemMissing()
+	{
+		var response = await _client.PatchAsJsonAsync("/api/work-items/99999/move", new { Date = "2020-01-14" });
+
+		response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
+
+	[Fact]
+	public async Task PatchMove_RecomputesWeekOf_WhenCrossingWeekBoundary()
+	{
+		// 2020-01-17 is Friday (weekOf 2020-01-13); moving to 2020-01-20 (Monday, weekOf 2020-01-20)
+		var r = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Week boundary move", Category = "SmallThing", Date = "2020-01-17" });
+		var item = await r.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.WeekOf.ShouldBe("2020-01-13");
+
+		var response = await _client.PatchAsJsonAsync($"/api/work-items/{item.Id}/move", new { Date = "2020-01-20" });
+
+		response.EnsureSuccessStatusCode();
+		var moved = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		moved.ShouldNotBeNull();
+		moved.Date.ShouldBe(new DateOnly(2020, 1, 20));
+		moved.WeekOf.ShouldBe("2020-01-20");
+	}
+
+	[Fact]
+	public async Task PatchSkip_SetsIsSkipped_WhenItemExists()
+	{
+		var r = await _client.PostAsJsonAsync("/api/work-items", new { Title = "Skip test", Category = "SmallThing", Date = "2020-01-13" });
+		var item = await r.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		item.ShouldNotBeNull();
+		item.IsSkipped.ShouldBeFalse();
+
+		var response = await _client.PatchAsync($"/api/work-items/{item.Id}/skip", null);
+
+		response.EnsureSuccessStatusCode();
+		var skipped = await response.Content.ReadFromJsonAsync<WorkItem>(JsonOptions);
+		skipped.ShouldNotBeNull();
+		skipped.IsSkipped.ShouldBeTrue();
+	}
+
+	[Fact]
+	public async Task PatchSkip_Returns404_WhenItemMissing()
+	{
+		var response = await _client.PatchAsync("/api/work-items/99999/skip", null);
+
+		response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
 }

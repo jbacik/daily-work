@@ -6,6 +6,9 @@ export interface WorkItem {
   sortOrder: number
   date: string
   weekOf: string
+  originalDate: string
+  timesMoved: number
+  isSkipped: boolean
 }
 
 export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week' | 'punch'
@@ -23,10 +26,23 @@ export interface ReadWatchItem {
   date: string
 }
 
+export interface WorkSessionReflections {
+  wins: string | null
+  whines: string | null
+  valueAdds: string | null
+}
+
+export interface ReflectionsInput {
+  wins?: string
+  whines?: string
+  valueAdds?: string
+}
+
 export interface WorkSession {
   id: number
   date: string
   clockedInAt: string | null
   clockedOutAt: string | null
   createdAt: string
+  reflections: WorkSessionReflections | null
 }

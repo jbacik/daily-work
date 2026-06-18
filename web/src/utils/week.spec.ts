@@ -1,4 +1,4 @@
-import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange } from './week'
+import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange, getPreviousWorkday } from './week'
 
 describe('week utils', () => {
   describe('DAYS', () => {
@@ -174,6 +174,42 @@ describe('week utils', () => {
         '2026-04-27',
         '2026-04-20',
       ])
+    })
+  })
+
+  describe('getPreviousWorkday', () => {
+    it('getPreviousWorkday_ReturnsNull_OnMonday', () => {
+      expect(getPreviousWorkday('2026-04-06')).toBeNull()
+    })
+
+    it('getPreviousWorkday_ReturnsPreviousDay_OnTuesdayToMonday', () => {
+      expect(getPreviousWorkday('2026-04-07')).toBe('2026-04-06')
+    })
+
+    it('getPreviousWorkday_ReturnsPreviousDay_OnWednesdayToTuesday', () => {
+      expect(getPreviousWorkday('2026-04-08')).toBe('2026-04-07')
+    })
+
+    it('getPreviousWorkday_ReturnsPreviousDay_OnThursdayToWednesday', () => {
+      expect(getPreviousWorkday('2026-04-09')).toBe('2026-04-08')
+    })
+
+    it('getPreviousWorkday_ReturnsPreviousDay_OnFridayToThursday', () => {
+      expect(getPreviousWorkday('2026-04-10')).toBe('2026-04-09')
+    })
+
+    it('getPreviousWorkday_ReturnsNull_OnSaturday', () => {
+      expect(getPreviousWorkday('2026-04-11')).toBeNull()
+    })
+
+    it('getPreviousWorkday_ReturnsNull_OnSunday', () => {
+      expect(getPreviousWorkday('2026-04-12')).toBeNull()
+    })
+
+    it('getPreviousWorkday_UsesToday_WhenNoArgumentGiven', () => {
+      vi.setSystemTime(new Date('2026-04-09T12:00:00Z')) // Thursday
+
+      expect(getPreviousWorkday()).toBe('2026-04-08')
     })
   })
 

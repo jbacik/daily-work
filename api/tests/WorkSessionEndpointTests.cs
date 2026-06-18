@@ -256,4 +256,188 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 		// Assert
 		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 	}
+
+	[Fact]
+	public async Task PutPunch_PersistsReflections_WhenProvided()
+	{
+		// Arrange
+		var clockIn = _factory.DateTimeProvider.UtcNow.AddHours(-8);
+		var clockOut = _factory.DateTimeProvider.UtcNow;
+		var payload = new
+		{
+			ClockedInAt = clockIn,
+			ClockedOutAt = clockOut,
+			Reflections = new { Wins = "Shipped the ceremony", Whines = "Flaky CI", ValueAdds = "Mentored a teammate" }
+		};
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Shipped the ceremony");
+		session.Reflections.Whines.ShouldBe("Flaky CI");
+		session.Reflections.ValueAdds.ShouldBe("Mentored a teammate");
+	}
+
+	[Fact]
+	public async Task PutPunch_RoundTripsAllReflectionFieldsAsJsonb()
+	{
+		// Arrange
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "A", Whines = "B", ValueAdds = "C" }
+		};
+		await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Act — re-read from the database to confirm the jsonb round-trips
+		var response = await _client.GetAsync(GetTodayUrl);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("A");
+		session.Reflections.Whines.ShouldBe("B");
+		session.Reflections.ValueAdds.ShouldBe("C");
+	}
+
+	[Fact]
+	public async Task PutPunch_WritesNullReflections_WhenAllFieldsAreWhitespace()
+	{
+		// Arrange
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "   ", Whines = "", ValueAdds = (string?)null }
+		};
+		await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Act
+		var response = await _client.GetAsync(GetTodayUrl);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutPunch_TrimsReflections_WhenSurroundedByWhitespace()
+	{
+		// Arrange
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "  shipped it  ", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("shipped it");
+	}
+
+	[Fact]
+	public async Task PutPunch_NullsBlankFields_WhenSomeProvided()
+	{
+		// Arrange — the web client always sends "" for untouched textareas
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "Shipped it", Whines = "", ValueAdds = "   " }
+		};
+		await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Act
+		var response = await _client.GetAsync(GetTodayUrl);
+
+		// Assert — blank fields persist as null, not empty strings
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Shipped it");
+		session.Reflections.Whines.ShouldBeNull();
+		session.Reflections.ValueAdds.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutPunch_LeavesReflectionsNull_WhenOmitted()
+	{
+		// Arrange
+		var payload = new { ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8), ClockedOutAt = _factory.DateTimeProvider.UtcNow };
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutPunch_PersistsReflectionsWithoutClockOut_WhenClockedOutAtNull()
+	{
+		// Arrange — saving a reflection draft mid-session (clocked in, not yet out)
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow,
+			ClockedOutAt = (DateTime?)null,
+			Reflections = new { Wins = "Mid-day draft", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+
+		// Act
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert — reflections persisted, session still not clocked out
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.ClockedOutAt.ShouldBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Mid-day draft");
+	}
+
+	[Fact]
+	public async Task GetToday_ReturnsReflections_WhenPresent()
+	{
+		// Arrange
+		var payload = new
+		{
+			ClockedInAt = _factory.DateTimeProvider.UtcNow.AddHours(-8),
+			ClockedOutAt = _factory.DateTimeProvider.UtcNow,
+			Reflections = new { Wins = "Win", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+		await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Act
+		var response = await _client.GetAsync(GetTodayUrl);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Win");
+		session.Reflections.Whines.ShouldBeNull();
+		session.Reflections.ValueAdds.ShouldBeNull();
+	}
 }
