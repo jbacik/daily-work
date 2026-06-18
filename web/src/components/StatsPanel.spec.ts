@@ -30,6 +30,9 @@ const createWorkItem = (overrides: Partial<WorkItem> = {}): WorkItem => ({
   sortOrder: 0,
   date: '2026-04-08',
   weekOf: '2026-04-06',
+  originalDate: '2026-04-08',
+  timesMoved: 0,
+  isSkipped: false,
   ...overrides,
 })
 
