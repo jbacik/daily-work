@@ -3,6 +3,7 @@ using System;
 using DailyWork.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DailyWork.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605144155_AddCarryoverMetadataToWorkItems")]
+    partial class AddCarryoverMetadataToWorkItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -229,33 +232,6 @@ namespace DailyWork.Api.Migrations
                     b.HasBaseType("DailyWork.Api.Entities.UpdateComm");
 
                     b.HasDiscriminator().HasValue(2);
-                });
-
-            modelBuilder.Entity("DailyWork.Api.Entities.WorkSession", b =>
-                {
-                    b.OwnsOne("DailyWork.Api.Entities.WorkSessionReflections", "Reflections", b1 =>
-                        {
-                            b1.Property<int>("WorkSessionId");
-
-                            b1.Property<string>("ValueAdds");
-
-                            b1.Property<string>("Whines");
-
-                            b1.Property<string>("Wins");
-
-                            b1.HasKey("WorkSessionId");
-
-                            b1.ToTable("WorkSessions");
-
-                            b1
-                                .ToJson("Reflections")
-                                .HasColumnType("jsonb");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkSessionId");
-                        });
-
-                    b.Navigation("Reflections");
                 });
 #pragma warning restore 612, 618
         }

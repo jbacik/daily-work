@@ -1,13 +1,18 @@
-import { mount } from '@vue/test-utils'
+import { mount, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import type { Mock } from 'vitest'
+
+// ClockStatus always renders ClockCeremonyModal, which registers a global
+// window keydown listener on mount — unmount wrappers after each test
+enableAutoUnmount(afterEach)
 
 vi.mock('@/api/client', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
 }))
@@ -25,12 +30,17 @@ const createMockSession = (overrides: Partial<WorkSession> = {}): WorkSession =>
   clockedInAt: null,
   clockedOutAt: null,
   createdAt: '2026-05-13T08:00:00.000Z',
+  reflections: null,
   ...overrides,
 })
 
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  document.body.innerHTML = ''
 })
 
 describe('ClockStatus', () => {
@@ -75,35 +85,37 @@ describe('ClockStatus', () => {
     expect(wrapper.get('[data-testid="clock-status-out-time"]').text()).toMatch(/^\d{2}:\d{2}:\d{2}$/)
   })
 
-  it('ClockStatus_CallsClockIn_WhenNotInClicked', async () => {
-    mockGet.mockResolvedValue('')
-    mockPost.mockResolvedValue(createMockSession({ clockedInAt: '2026-05-13T13:03:42.000Z' }))
+  it('ClockStatus_OpensCeremonyModal_WhenNotInClicked', async () => {
+    // First GET = workSession (null session), second GET = dailyTasks fetch (empty array)
+    mockGet.mockResolvedValueOnce('').mockResolvedValue([])
 
-    const wrapper = mount(ClockStatus)
+    const wrapper = mount(ClockStatus, { attachTo: document.body })
     await flushAsync()
 
     await wrapper.get('[data-testid="clock-status-not-in"]').trigger('click')
     await flushAsync()
 
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-in', null, { params: { date: expect.any(String) } })
-    expect(wrapper.find('[data-testid="clock-status-in"]').exists()).toBe(true)
+    // Modal Teleports to body — query from document
+    const modal = document.body.querySelector('[data-testid="ceremony-modal"]')
+    expect(modal).not.toBeNull()
+    expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('ClockStatus_CallsClockOut_WhenClockOutClicked', async () => {
-    mockGet.mockResolvedValue(createMockSession({ clockedInAt: '2026-05-13T13:03:42.000Z' }))
-    mockPost.mockResolvedValue(createMockSession({
-      clockedInAt: '2026-05-13T13:03:42.000Z',
-      clockedOutAt: '2026-05-13T21:42:11.000Z',
-    }))
+  it('ClockStatus_OpensCeremonyModalInOutMode_WhenClockOutClicked', async () => {
+    // First GET = workSession (clocked-in), second GET = dailyTasks fetch (empty array)
+    mockGet.mockResolvedValueOnce(createMockSession({ clockedInAt: '2026-05-13T13:03:42.000Z' })).mockResolvedValue([])
 
-    const wrapper = mount(ClockStatus)
+    const wrapper = mount(ClockStatus, { attachTo: document.body })
     await flushAsync()
 
     await wrapper.get('[data-testid="clock-out-btn"]').trigger('click')
     await flushAsync()
 
-    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: expect.any(String) } })
-    expect(wrapper.find('[data-testid="clock-status-out"]').exists()).toBe(true)
+    // Modal Teleports to body — opens in out mode, no immediate clock-out POST
+    const modal = document.body.querySelector('[data-testid="ceremony-modal"]')
+    expect(modal).not.toBeNull()
+    expect(modal?.querySelector('[data-testid="ceremony-header"]')?.textContent).toContain('clock-out.ceremony')
+    expect(mockPost).not.toHaveBeenCalled()
   })
 
   it('ClockStatus_DoesNotShowInTime_WhenClockedOutWithoutClockIn', async () => {

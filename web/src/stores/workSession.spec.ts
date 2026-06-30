@@ -134,4 +134,54 @@ describe('useWorkSessionStore', () => {
     )
     expect(store.today).toEqual(cleared)
   })
+
+  it('saveReflections_PutsDraftWithExistingTimestamps_WithoutClockingOut', async () => {
+    // Arrange — clocked in, not yet out
+    const withDraft = { ...sessionFixture, reflections: { wins: 'Shipped', whines: null, valueAdds: null } }
+    mockPut.mockResolvedValue(withDraft)
+    const store = useWorkSessionStore()
+    store.today = { ...sessionFixture }
+
+    // Act
+    await store.saveReflections({ wins: 'Shipped', whines: '', valueAdds: '' })
+
+    // Assert — keeps clockedInAt, leaves clockedOutAt null (no clock-out)
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      { clockedInAt: sessionFixture.clockedInAt, clockedOutAt: null, reflections: { wins: 'Shipped', whines: '', valueAdds: '' } },
+      { params: { date: getToday() } },
+    )
+    expect(mockPost).not.toHaveBeenCalled()
+    expect(store.today).toEqual(withDraft)
+  })
+
+  it('clockOutWithReflections_SavesReflectionsBeforeClockOut', async () => {
+    // Arrange
+    mockPut.mockResolvedValue({ ...sessionFixture, reflections: { wins: 'Shipped', whines: null, valueAdds: null } })
+    mockPost.mockResolvedValue({ ...sessionFixture, clockedOutAt: '2026-05-13T21:42:11Z' })
+    const store = useWorkSessionStore()
+    store.today = { ...sessionFixture }
+
+    // Act
+    await store.clockOutWithReflections({ wins: 'Shipped', whines: '', valueAdds: '' })
+
+    // Assert — reflections PUT runs strictly before the clock-out POST
+    expect(mockPut).toHaveBeenCalled()
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: getToday() } })
+    expect(mockPut.mock.invocationCallOrder[0]).toBeLessThan(mockPost.mock.invocationCallOrder[0])
+  })
+
+  it('clockOutWithReflections_SkipsReflectionPut_WhenNull', async () => {
+    // Arrange
+    mockPost.mockResolvedValue({ ...sessionFixture, clockedOutAt: '2026-05-13T21:42:11Z' })
+    const store = useWorkSessionStore()
+    store.today = { ...sessionFixture }
+
+    // Act
+    await store.clockOutWithReflections(null)
+
+    // Assert
+    expect(mockPut).not.toHaveBeenCalled()
+    expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: getToday() } })
+  })
 })

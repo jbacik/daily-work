@@ -96,6 +96,18 @@ internal static class WorkSessionEndpoints
 				session.ClockedOutAt = dto.ClockedOutAt;
 			}
 
+			if (dto.Reflections is not null)
+			{
+				// Null each blank field individually (the web client sends "" for untouched
+				// textareas) so we never persist empty strings; null the whole object when all blank.
+				var wins = string.IsNullOrWhiteSpace(dto.Reflections.Wins) ? null : dto.Reflections.Wins.Trim();
+				var whines = string.IsNullOrWhiteSpace(dto.Reflections.Whines) ? null : dto.Reflections.Whines.Trim();
+				var valueAdds = string.IsNullOrWhiteSpace(dto.Reflections.ValueAdds) ? null : dto.Reflections.ValueAdds.Trim();
+				session.Reflections = wins is null && whines is null && valueAdds is null
+					? null
+					: new WorkSessionReflections { Wins = wins, Whines = whines, ValueAdds = valueAdds };
+			}
+
 			await db.SaveChangesAsync();
 			return Results.Ok(session);
 		});

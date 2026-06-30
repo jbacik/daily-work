@@ -17,6 +17,8 @@
   --muted-foreground: oklch(0.55 0.05 255);
   --accent: oklch(0.7 0.18 55);
   --accent-foreground: oklch(0.2 0.05 55);
+  --success: oklch(0.50 0.09 155);
+  --success-foreground: oklch(0.96 0.01 85);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.8 0.02 255);
@@ -42,6 +44,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -60,6 +64,25 @@
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+@utility animate-scan-sweep {
+  animation: scan-sweep 0.18s linear forwards;
+}
+
+@keyframes scan-sweep {
+  0%   { left: 0%;   opacity: 1; }
+  90%  { left: 100%; opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@utility animate-success-flash {
+  animation: success-flash 0.7s ease-out forwards;
+}
+
+@keyframes success-flash {
+  0%, 100% { background-color: var(--color-background); }
+  25%      { background-color: color-mix(in oklab, var(--color-success) 15%, var(--color-background)); }
 }
 
 @layer base {
