@@ -5,6 +5,8 @@
   <ItemGroup>
     <!-- API -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <!-- Explicit pin to resolve GHSA-v5pm-xwqc-g5wc (stack overflow DoS in Microsoft.OpenApi <= 2.7.4 / 3.5.3) -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.3.0" />
