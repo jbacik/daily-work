@@ -128,7 +128,7 @@ Angle-bracket "placeholder" text, italic and muted:
 ```
 
 ### Blinking cursor
-The signature "live terminal" flourish — an accent block or bar with `animate-blink`:
+The signature "live terminal" flourish. Two variants: a character marker (`_`, `~`, `*`) uses `animate-pulse`; a solid block or bar cursor uses `animate-blink`.
 ```html
 <span class="animate-pulse text-accent">_</span>
 <span class="inline-block w-[0.5em] h-[0.9em] bg-foreground align-text-bottom ml-1 animate-blink"></span>
