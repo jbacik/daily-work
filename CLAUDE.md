@@ -53,6 +53,7 @@ All conventions live in `.claude/rules/`. Read the relevant file before touching
 
 - `api.md` — endpoint structure, DTO/entity patterns, EF Core, logging
 - `vue.md` — component structure, Pinia stores, Tailwind tokens, API call pattern
+- `design-system.md` — visual language: color tokens, typography, CLI-aesthetic patterns (read before designing any new UI/artifact/mockup)
 - `vue-testing.md` — Vitest + Vue Test Utils patterns
 - `testing.md` — xUnit integration test patterns
 - `migrations.md` — EF Core migration conventions
