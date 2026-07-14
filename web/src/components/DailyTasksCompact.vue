@@ -2,7 +2,8 @@
 import { ref, computed, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
-import { DAYS } from '@/utils/week'
+import { DAYS, getCarriedDays, getDayLabel } from '@/utils/week'
+import type { WorkItem } from '@/types'
 
 const store = useDailyTasksStore()
 
@@ -15,14 +16,17 @@ const editOriginalValue = ref('')
 
 const displayDays = computed(() => {
   const day = store.currentDay
-  const yesterday = day - 1
-  const tomorrow = day + 1
 
   return [
-    { index: yesterday, label: 'YESTERDAY', shortLabel: yesterday >= 0 && yesterday < 5 ? DAYS[yesterday] : null },
-    { index: day, label: 'TODAY', shortLabel: day >= 0 && day < 5 ? DAYS[day] : null },
-    { index: tomorrow, label: 'TOMORROW', shortLabel: tomorrow >= 0 && tomorrow < 5 ? DAYS[tomorrow] : null },
-  ]
+    { index: day - 1, label: 'YESTERDAY' },
+    { index: day, label: 'TODAY' },
+    { index: day + 1, label: 'TOMORROW' },
+  ].map(({ index, label }) => ({
+    index,
+    label,
+    shortLabel: index >= 0 && index < 5 ? DAYS[index] : null,
+    ghosts: store.getGhostTasksForDay(index),
+  }))
 })
 
 function isOutOfRange(index: number) {
@@ -31,6 +35,10 @@ function isOutOfRange(index: number) {
 
 function isEditable(label: string) {
   return label === 'TODAY' || label === 'TOMORROW'
+}
+
+function carriedDays(task: WorkItem): number {
+  return getCarriedDays(task.originalDate, task.date)
 }
 
 function startAdding(day: number) {
@@ -128,7 +136,7 @@ function cancelEdit() {
 
     <div class="grid gap-3" style="grid-template-columns: 1fr 2fr 1fr">
       <div
-        v-for="{ index, label, shortLabel } in displayDays"
+        v-for="{ index, label, shortLabel, ghosts } in displayDays"
         :key="label"
         :class="[
           'border p-4 min-h-[160px]',
@@ -200,6 +208,15 @@ function cancelEdit() {
               {{ task.title }}
             </span>
 
+            <span
+              v-if="carriedDays(task) > 0"
+              class="flex-shrink-0 self-center text-[10.5px] leading-none whitespace-nowrap text-accent border border-accent/50 bg-accent/5 px-1.5 py-0.5"
+              :title="`carried ${carriedDays(task)} day${carriedDays(task) > 1 ? 's' : ''}`"
+              data-testid="carry-badge"
+            >
+              &#8635; {{ carriedDays(task) }}d
+            </span>
+
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
               <template v-if="isEditable(label)">
                 <button
@@ -259,6 +276,30 @@ function cancelEdit() {
             >
               + add
             </button>
+          </div>
+
+          <!-- Carried-through breadcrumb: read-only trail of tasks passing through this column -->
+          <div
+            v-if="ghosts.length > 0"
+            class="mt-3 pt-2 border-t border-dashed border-border"
+            data-testid="ghost-section"
+          >
+            <div class="text-[9.5px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-1.5">
+              carried through
+            </div>
+            <div
+              v-for="ghost in ghosts"
+              :key="`${ghost.id}-ghost`"
+              class="grid grid-cols-[1fr_auto] gap-2 items-baseline pl-3.5 text-sm text-muted-foreground"
+              data-testid="ghost-row"
+            >
+              <span class="break-words">
+                <span class="text-muted-foreground/70">&middot;</span> {{ ghost.title }}
+              </span>
+              <span class="text-[10.5px] opacity-80 whitespace-nowrap">
+                &rarr; {{ getDayLabel(ghost.date) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>

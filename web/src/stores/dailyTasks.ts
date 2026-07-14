@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import client from '@/api/client'
 import type { WorkItem } from '@/types'
-import { getWeekStart, getCurrentDayIndex, getDateForDayIndex } from '@/utils/week'
+import { getWeekStart, getCurrentDayIndex, getDateForDayIndex, isCarriedThrough } from '@/utils/week'
 
 export const useDailyTasksStore = defineStore('dailyTasks', () => {
   const items = ref<WorkItem[]>([])
@@ -14,6 +14,17 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
     return items.value
       .filter(t => t.category === 'SmallThing' && t.date === date)
       .sort((a, b) => a.sortOrder - b.sortOrder)
+  }
+
+  // Carried tasks whose trail passes through this day but that live (are due) elsewhere.
+  // Read-only breadcrumbs — never includes the day the task is due (it's a live row there).
+  function getGhostTasksForDay(day: number) {
+    const columnDate = getDateForDayIndex(day, weekOf.value)
+    return items.value
+      .filter(t => t.category === 'SmallThing'
+        && t.date !== t.originalDate
+        && isCarriedThrough(t.originalDate, t.date, columnDate))
+      .sort((a, b) => a.date.localeCompare(b.date))
   }
 
   async function fetch(week?: string) {
@@ -83,5 +94,5 @@ export const useDailyTasksStore = defineStore('dailyTasks', () => {
     if (idx !== -1) items.value[idx] = updated
   }
 
-  return { items, weekOf, currentDay, getTasksForDay, fetch, create, update, remove, moveUp, moveDown, move, skip }
+  return { items, weekOf, currentDay, getTasksForDay, getGhostTasksForDay, fetch, create, update, remove, moveUp, moveDown, move, skip }
 })

@@ -21,6 +21,12 @@ vi.mock('@/utils/week', () => ({
   getWeekStart: () => WEEK_START,
   getCurrentDayIndex: () => 2,
   getDateForDayIndex: (dayIndex: number) => DATE_MAP[dayIndex] ?? '',
+  getCarriedDays: (originalDate: string, date: string) =>
+    Math.round((new Date(`${date}T00:00:00`).getTime() - new Date(`${originalDate}T00:00:00`).getTime()) / 86_400_000),
+  getDayLabel: (date: string) =>
+    ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(`${date}T00:00:00`).getDay()],
+  isCarriedThrough: (originalDate: string, date: string, columnDate: string) =>
+    originalDate <= columnDate && columnDate < date,
 }))
 
 // Make debounce immediate so auto-save fires synchronously in tests
@@ -46,6 +52,14 @@ vi.mock('@/stores/dailyTasks', () => ({
       return mockItems.value
         .filter(t => t.category === 'SmallThing' && t.date === date)
         .sort((a, b) => a.sortOrder - b.sortOrder)
+    },
+    getGhostTasksForDay: (day: number) => {
+      const columnDate = DATE_MAP[day]
+      return mockItems.value
+        .filter(t => t.category === 'SmallThing'
+          && t.date !== t.originalDate
+          && t.originalDate <= columnDate && columnDate < t.date)
+        .sort((a, b) => a.date.localeCompare(b.date))
     },
     fetch: vi.fn(),
     create: mockCreate,
@@ -424,5 +438,82 @@ describe('DailyTasksCompact', () => {
 
     expect(wrapper.findAll('[data-testid="task-move-up"]')).toHaveLength(0)
     expect(wrapper.findAll('[data-testid="task-move-down"]')).toHaveLength(0)
+  })
+
+  it('DailyTasksCompact_ShowsCarryBadge_WhenTaskIsCarried', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Carried task', originalDate: YESTERDAY_DATE, date: TODAY_DATE }),
+    ]
+    await nextTick()
+
+    const badges = wrapper.findAll('[data-testid="carry-badge"]')
+    expect(badges).toHaveLength(1)
+    expect(badges[0]!.text()).toContain('1d')
+    expect(badges[0]!.attributes('title')).toBe('carried 1 day')
+  })
+
+  it('DailyTasksCompact_HidesCarryBadge_WhenTaskNotCarried', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Fresh task', originalDate: TODAY_DATE, date: TODAY_DATE }),
+    ]
+    await nextTick()
+
+    expect(wrapper.findAll('[data-testid="carry-badge"]')).toHaveLength(0)
+  })
+
+  it('DailyTasksCompact_CarryBadge_PluralizesDays', async () => {
+    const wrapper = mountComponent()
+    // orig Mon (2026-04-06), due Thu/tomorrow (2026-04-09) → 3 days
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Long carry', originalDate: WEEK_START, date: TOMORROW_DATE }),
+    ]
+    await nextTick()
+
+    const badge = wrapper.get('[data-testid="carry-badge"]')
+    expect(badge.text()).toContain('3d')
+    expect(badge.attributes('title')).toBe('carried 3 days')
+  })
+
+  it('DailyTasksCompact_RendersGhostBreadcrumb_OnPassThroughDay', async () => {
+    const wrapper = mountComponent()
+    // Carried task due today; its trail passes through yesterday
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Passing task', originalDate: YESTERDAY_DATE, date: TODAY_DATE }),
+    ]
+    await nextTick()
+
+    const ghostRows = wrapper.findAll('[data-testid="ghost-row"]')
+    expect(ghostRows).toHaveLength(1)
+    expect(ghostRows[0]!.text()).toContain('Passing task')
+    // due date 2026-04-08 is a Wednesday
+    expect(ghostRows[0]!.text()).toContain('WED')
+  })
+
+  it('DailyTasksCompact_GhostRow_HasNoInteractiveControls', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Passing task', originalDate: YESTERDAY_DATE, date: TODAY_DATE }),
+    ]
+    await nextTick()
+
+    const ghostSection = wrapper.get('[data-testid="ghost-section"]')
+    expect(ghostSection.find('[data-testid="task-toggle"]').exists()).toBe(false)
+    expect(ghostSection.find('[data-testid="task-delete"]').exists()).toBe(false)
+    expect(ghostSection.find('[data-testid="carry-badge"]').exists()).toBe(false)
+  })
+
+  it('DailyTasksCompact_CarriedTask_RendersLiveOnce_AndGhostElsewhere_NoDoubleRender', async () => {
+    const wrapper = mountComponent()
+    mockItems.value = [
+      createWorkItem({ id: 1, title: 'Only once', originalDate: YESTERDAY_DATE, date: TODAY_DATE }),
+    ]
+    await nextTick()
+
+    // One live row (with its badge), one ghost row on the pass-through column — never both on the same day
+    expect(wrapper.findAll('[data-testid="carry-badge"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="ghost-row"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="task-title"]')).toHaveLength(1)
   })
 })

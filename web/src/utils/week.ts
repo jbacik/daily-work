@@ -55,6 +55,28 @@ export function getRecentWeekStarts(count: number): string[] {
   return result
 }
 
+const WEEKDAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const
+
+// Weekday code (MON..FRI, plus SUN/SAT for weekend dates) for a yyyy-MM-dd string.
+// Used for the ghost breadcrumb "→ DEST" destination label.
+export function getDayLabel(date: string): string {
+  return WEEKDAY_CODES[parseLocalDate(date).getDay()]!
+}
+
+export function getCarriedDays(originalDate: string, date: string): number {
+  const orig = parseLocalDate(originalDate)
+  const due = parseLocalDate(date)
+  const ms = due.getTime() - orig.getTime()
+  return Math.round(ms / 86_400_000)
+}
+
+// A carried task passes "through" a column when the column's date falls on or
+// after its original day but strictly before its current due day. It renders as
+// a live row only on its due day, so the due day is never also a ghost.
+export function isCarriedThrough(originalDate: string, date: string, columnDate: string): boolean {
+  return originalDate <= columnDate && columnDate < date
+}
+
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function formatWeekRange(weekStart: string): string {
