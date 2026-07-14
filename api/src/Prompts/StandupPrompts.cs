@@ -9,11 +9,13 @@ internal static class StandupPrompts
 		_ => GetMidWeekPrompt(),
 	};
 
-	internal static string BuildUserMessage(string workItemsJson, string today, string yesterday, string? learningQueueJson = null)
+	internal static string BuildUserMessage(string workItemsJson, string today, string yesterday, string? learningQueueJson = null, string? forecastJson = null)
 	{
 		var message = $"Today's date: {today}\nYesterday's date: {yesterday}\n\nWork items:\n{workItemsJson}";
 		if (learningQueueJson is not null)
 			message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
+		if (forecastJson is not null)
+			message += $"\n\nDaily calendar forecast:\n{forecastJson}";
 		return message;
 	}
 
@@ -26,6 +28,11 @@ internal static class StandupPrompts
         - isDone: completion status
         - date: scheduled day
         - sortOrder: items are pre-sorted; the FIRST SmallThing for a given date is the "One Thing" / "big thing of the day"
+
+        Daily calendar forecast (a JSON block may be provided at the end of the user message; it may be absent):
+        - syncMeetings: names of sync meetings on today's calendar
+        - upcomingPTO: out-of-office events with title, start, end
+        Use ONLY syncMeetings and upcomingPTO from the forecast — ignore every other forecast field.
 
         Output exactly this structure (use ### for each question heading):
 
@@ -49,9 +56,12 @@ internal static class StandupPrompts
 
         The first line is ONLY today's big thing of the day (first SmallThing by sortOrder for today) tied back to the weekly BigThing.
         Then a BLANK LINE, then "Also on deck:" listing today's remaining SmallThings.
+        If the forecast lists syncMeetings, fold them into the "Also on deck:" line as syncs (e.g. ", plus syncs: Ali / Jared"). Do not repeat a sync that already appears as a task, and do not invent syncs when the forecast is absent.
 
         ### Do you have any upcoming PTO or unavailability the team should know about?
-        No
+        OOO Jul 24 – Jul 30 (Family Time).
+
+        If the forecast's upcomingPTO has entries, answer from it: one fragment per entry formatted "OOO {Mon D} – {Mon D}" from the start/end dates, with the title (leading emoji stripped) in parentheses when it adds context; join multiple entries with "; ". If the forecast is absent or upcomingPTO is empty, answer exactly "No".
 
         Style rules:
         - Write in first person. This gets pasted into Geekbot.
@@ -72,6 +82,11 @@ internal static class StandupPrompts
         - isDone: completion status
         - date: scheduled day
         - sortOrder: items are pre-sorted; the FIRST SmallThing for a given date is the "One Thing" / "big thing of the day"
+
+        Daily calendar forecast (a JSON block may be provided at the end of the user message; it may be absent):
+        - syncMeetings: names of sync meetings on today's calendar
+        - upcomingPTO: out-of-office events with title, start, end
+        Use ONLY syncMeetings and upcomingPTO from the forecast — ignore every other forecast field.
 
         Learning queue item fields (provided separately, may be empty):
         - title: name of the resource
@@ -102,9 +117,12 @@ internal static class StandupPrompts
 
         The first line is ONLY today's big thing of the day (first SmallThing by sortOrder for today) tied back to the weekly BigThing.
         Then a BLANK LINE, then "Also on deck:" listing today's remaining SmallThings.
+        If the forecast lists syncMeetings, fold them into the "Also on deck:" line as syncs (e.g. ", plus syncs: Ali / Jared"). Do not repeat a sync that already appears as a task, and do not invent syncs when the forecast is absent.
 
         ### Do you have any upcoming PTO or unavailability the team should know about?
-        No
+        OOO Jul 24 – Jul 30 (Family Time).
+
+        If the forecast's upcomingPTO has entries, answer from it: one fragment per entry formatted "OOO {Mon D} – {Mon D}" from the start/end dates, with the title (leading emoji stripped) in parentheses when it adds context; join multiple entries with "; ". If the forecast is absent or upcomingPTO is empty, answer exactly "No".
 
         ### What's one experiment, improvement, or lesson from this week that helped you (or could help the team)?
         This week I tried **[title]** — [revised notes as a concise value prop]. Worth checking out: [url]

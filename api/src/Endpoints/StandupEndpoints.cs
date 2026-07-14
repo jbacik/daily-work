@@ -193,13 +193,25 @@ internal static class StandupEndpoints
 					learningQueueJson = JsonSerializer.Serialize(consumedItems, JsonOptions);
 			}
 
+			// Include today's calendar forecast (persisted by the planning modal) for daily standups
+			string? forecastJson = null;
+			if (!useWeeklyPrompt)
+			{
+				forecastJson = await db.WorkSessions
+					.AsNoTracking()
+					.Where(s => s.Date == todayDate)
+					.Select(s => s.CalendarForecastJson)
+					.FirstOrDefaultAsync();
+			}
+
 			var chatHistory = new ChatHistory();
 			chatHistory.AddSystemMessage(systemPrompt);
 			chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(
 				workItemsJson,
 				todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 				yesterdayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-				learningQueueJson));
+				learningQueueJson,
+				forecastJson));
 
 			var response = await chatService.GetChatMessageContentAsync(chatHistory);
 
