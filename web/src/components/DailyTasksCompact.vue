@@ -2,7 +2,8 @@
 import { ref, computed, nextTick } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
-import { DAYS } from '@/utils/week'
+import { DAYS, getCarriedDays, getDayLabel } from '@/utils/week'
+import type { WorkItem } from '@/types'
 
 const store = useDailyTasksStore()
 
@@ -31,6 +32,10 @@ function isOutOfRange(index: number) {
 
 function isEditable(label: string) {
   return label === 'TODAY' || label === 'TOMORROW'
+}
+
+function carriedDays(task: WorkItem): number {
+  return getCarriedDays(task.originalDate, task.date)
 }
 
 function startAdding(day: number) {
@@ -200,6 +205,15 @@ function cancelEdit() {
               {{ task.title }}
             </span>
 
+            <span
+              v-if="carriedDays(task) > 0"
+              class="flex-shrink-0 self-center text-[10.5px] leading-none whitespace-nowrap text-accent border border-accent/50 bg-accent/5 px-1.5 py-0.5"
+              :title="`carried ${carriedDays(task)} day${carriedDays(task) > 1 ? 's' : ''}`"
+              data-testid="carry-badge"
+            >
+              &#8635; {{ carriedDays(task) }}d
+            </span>
+
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
               <template v-if="isEditable(label)">
                 <button
@@ -259,6 +273,30 @@ function cancelEdit() {
             >
               + add
             </button>
+          </div>
+
+          <!-- Carried-through breadcrumb: read-only trail of tasks passing through this column -->
+          <div
+            v-if="store.getGhostTasksForDay(index).length > 0"
+            class="mt-3 pt-2 border-t border-dashed border-border"
+            data-testid="ghost-section"
+          >
+            <div class="text-[9.5px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-1.5">
+              carried through
+            </div>
+            <div
+              v-for="ghost in store.getGhostTasksForDay(index)"
+              :key="`${ghost.id}-ghost`"
+              class="grid grid-cols-[1fr_auto] gap-2 items-baseline pl-3.5 text-sm text-muted-foreground"
+              data-testid="ghost-row"
+            >
+              <span class="break-words">
+                <span class="text-muted-foreground/70">&middot;</span> {{ ghost.title }}
+              </span>
+              <span class="text-[10.5px] opacity-80 whitespace-nowrap">
+                &rarr; {{ getDayLabel(ghost.date) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
