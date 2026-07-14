@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { DAYS, getCarriedDays, getDayLabel } from '@/utils/week'
 import type { WorkItem } from '@/types'
 
 const store = useDailyTasksStore()
+
+// Carried-through ghost rows per day column, computed once per render.
+const ghostsByDay = computed(() => DAYS.map((_, i) => store.getGhostTasksForDay(i)))
 
 const newTask = ref('')
 const addingForDay = ref<number | null>(null)
@@ -143,7 +146,7 @@ function carriedDays(task: WorkItem): number {
 
         <!-- Carried-through breadcrumb: read-only trail of tasks passing through this day -->
         <div
-          v-if="store.getGhostTasksForDay(dayIndex).length > 0"
+          v-if="ghostsByDay[dayIndex].length > 0"
           class="mt-3 pt-2 border-t border-dashed border-border"
           data-testid="ghost-section"
         >
@@ -151,7 +154,7 @@ function carriedDays(task: WorkItem): number {
             carried through
           </div>
           <div
-            v-for="ghost in store.getGhostTasksForDay(dayIndex)"
+            v-for="ghost in ghostsByDay[dayIndex]"
             :key="`${ghost.id}-ghost`"
             class="grid grid-cols-[1fr_auto] gap-1.5 items-baseline pl-3.5 text-xs text-muted-foreground"
             data-testid="ghost-row"

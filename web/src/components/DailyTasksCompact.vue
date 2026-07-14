@@ -16,14 +16,17 @@ const editOriginalValue = ref('')
 
 const displayDays = computed(() => {
   const day = store.currentDay
-  const yesterday = day - 1
-  const tomorrow = day + 1
 
   return [
-    { index: yesterday, label: 'YESTERDAY', shortLabel: yesterday >= 0 && yesterday < 5 ? DAYS[yesterday] : null },
-    { index: day, label: 'TODAY', shortLabel: day >= 0 && day < 5 ? DAYS[day] : null },
-    { index: tomorrow, label: 'TOMORROW', shortLabel: tomorrow >= 0 && tomorrow < 5 ? DAYS[tomorrow] : null },
-  ]
+    { index: day - 1, label: 'YESTERDAY' },
+    { index: day, label: 'TODAY' },
+    { index: day + 1, label: 'TOMORROW' },
+  ].map(({ index, label }) => ({
+    index,
+    label,
+    shortLabel: index >= 0 && index < 5 ? DAYS[index] : null,
+    ghosts: store.getGhostTasksForDay(index),
+  }))
 })
 
 function isOutOfRange(index: number) {
@@ -133,7 +136,7 @@ function cancelEdit() {
 
     <div class="grid gap-3" style="grid-template-columns: 1fr 2fr 1fr">
       <div
-        v-for="{ index, label, shortLabel } in displayDays"
+        v-for="{ index, label, shortLabel, ghosts } in displayDays"
         :key="label"
         :class="[
           'border p-4 min-h-[160px]',
@@ -277,7 +280,7 @@ function cancelEdit() {
 
           <!-- Carried-through breadcrumb: read-only trail of tasks passing through this column -->
           <div
-            v-if="store.getGhostTasksForDay(index).length > 0"
+            v-if="ghosts.length > 0"
             class="mt-3 pt-2 border-t border-dashed border-border"
             data-testid="ghost-section"
           >
@@ -285,7 +288,7 @@ function cancelEdit() {
               carried through
             </div>
             <div
-              v-for="ghost in store.getGhostTasksForDay(index)"
+              v-for="ghost in ghosts"
               :key="`${ghost.id}-ghost`"
               class="grid grid-cols-[1fr_auto] gap-2 items-baseline pl-3.5 text-sm text-muted-foreground"
               data-testid="ghost-row"
