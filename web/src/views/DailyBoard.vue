@@ -16,6 +16,7 @@ import StatsPanel from '@/components/StatsPanel.vue'
 import ClockStatus from '@/components/ClockStatus.vue'
 import SlashCommandMenu from '@/components/SlashCommandMenu.vue'
 import CommandModal from '@/components/CommandModal.vue'
+import StandupPlanningModal from '@/components/StandupPlanningModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
 import PunchModal from '@/components/PunchModal.vue'
 import PastWeekView from '@/components/PastWeekView.vue'
@@ -35,13 +36,8 @@ const currentWeekStart = getWeekStart()
 const selectedWeek = ref<string>(currentWeekStart)
 const isPastWeek = computed(() => selectedWeek.value !== currentWeekStart)
 
-const modalTitle = computed(() => {
-  switch (activeCommand.value) {
-    case 'standup': return '// DAILY STANDUP'
-    case 'weekly': return '// WEEKLY ROUNDUP'
-    default: return ''
-  }
-})
+const modalTitle = computed(() =>
+  activeCommand.value === 'weekly' ? '// WEEKLY ROUNDUP' : '')
 
 function handleCommand(type: CommandType) {
   activeCommand.value = type
@@ -153,8 +149,14 @@ onMounted(() => {
 
       <BigThing v-if="!isPastWeek" />
 
+      <StandupPlanningModal
+        :is-open="activeCommand === 'standup'"
+        :week-of="dailyTasks.weekOf"
+        @close="activeCommand = null"
+      />
+
       <CommandModal
-        :is-open="activeCommand === 'standup' || activeCommand === 'weekly'"
+        :is-open="activeCommand === 'weekly'"
         :title="modalTitle"
         :command-type="activeCommand"
         :week-of="dailyTasks.weekOf"

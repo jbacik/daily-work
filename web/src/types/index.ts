@@ -45,4 +45,33 @@ export interface WorkSession {
   clockedOutAt: string | null
   createdAt: string
   reflections: WorkSessionReflections | null
+  calendarForecastJson?: string | null
 }
+
+export interface ForecastFocusBlock {
+  startTime: string
+  endTime: string
+  duration: string
+}
+
+export interface ForecastPto {
+  title: string
+  start: string
+  end: string
+  allDay: boolean
+  eventType: string
+}
+
+export interface DailyForecast {
+  date: string
+  dayOfWeek: string
+  workdayWindow: string
+  meetings: { count: number; totalHours: number }
+  focusTime: { count: number; totalHours: number; blocks: ForecastFocusBlock[] }
+  syncMeetings: string[]
+  recommendedLunch: string | null
+  upcomingPTO: ForecastPto[]
+  targets?: { meetingHours: number; focusHours: number }
+}
+
+export type ForecastStatus = 'loading' | 'loaded' | 'missing' | 'error'
