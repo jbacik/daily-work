@@ -273,7 +273,7 @@ onUnmounted(() => {
               <!-- Generate affordance -->
               <div v-else-if="sections.length === 0" class="flex items-center gap-3">
                 <button
-                  class="text-muted-foreground hover:text-primary text-sm"
+                  class="border border-accent text-accent hover:bg-accent hover:text-accent-foreground transition-colors text-sm px-4 py-1.5 tracking-wide"
                   data-testid="generate-standup-btn"
                   @click="generate"
                 >
@@ -289,13 +289,13 @@ onUnmounted(() => {
                 v-else
                 ref="contentRef"
                 contenteditable="true"
-                class="w-full bg-transparent text-foreground focus:outline-none leading-relaxed"
+                class="w-full bg-transparent text-foreground text-sm focus:outline-none leading-relaxed"
                 data-testid="planning-modal-content"
               >
-                <div v-for="(section, i) in sections" :key="i" class="mb-8">
+                <div v-for="(section, i) in sections" :key="i" class="mb-6">
                   <div class="flex items-start gap-2 group">
                     <div class="flex-1">
-                      <div class="text-accent text-lg font-bold">{{ section.question }}</div>
+                      <div class="text-accent font-bold">{{ section.question }}</div>
                       <div class="whitespace-pre-wrap mt-1" v-html="renderBold(section.answer)"></div>
                     </div>
                     <button
