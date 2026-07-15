@@ -33,6 +33,16 @@ describe('ForecastLoader', () => {
     expect(wrapper.find('[data-testid="forecast-pick"]').exists()).toBe(true)
   })
 
+  it('ForecastLoader_ShowsErrorMessage_WhenStatusError', () => {
+    // Arrange / Act
+    const wrapper = mountComponent({ status: 'error', error: "'bad.json' is not valid JSON" })
+
+    // Assert — the real error is surfaced, not the misleading "not found" message
+    expect(wrapper.get('[data-testid="forecast-error"]').text()).toContain('is not valid JSON')
+    expect(wrapper.find('[data-testid="forecast-missing"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="forecast-pick"]').exists()).toBe(true)
+  })
+
   it('ForecastLoader_EmitsUnload_WhenUnloadClicked', async () => {
     // Arrange
     const wrapper = mountComponent({ status: 'loaded', fileName: 'daily-forecast-2026-07-14.json' })

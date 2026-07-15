@@ -61,7 +61,10 @@ async function onFileChange(e: Event) {
     </span>
 
     <span v-else class="inline-flex items-center gap-3 flex-wrap">
-      <span class="text-destructive" data-testid="forecast-missing">&#9888; no forecast file found for today</span>
+      <span v-if="status === 'error'" class="text-destructive" data-testid="forecast-error">
+        <span class="text-accent">ERR:</span> {{ error ?? 'failed to load forecast' }}
+      </span>
+      <span v-else class="text-destructive" data-testid="forecast-missing">&#9888; no forecast file found for today</span>
       <button
         class="text-muted-foreground hover:text-primary text-xs"
         data-testid="forecast-pick"
@@ -77,9 +80,6 @@ async function onFileChange(e: Event) {
         data-testid="forecast-file-input"
         @change="onFileChange"
       />
-      <span v-if="error" class="text-destructive text-xs" data-testid="forecast-error">
-        <span class="text-accent">ERR:</span> {{ error }}
-      </span>
     </span>
   </div>
 </template>

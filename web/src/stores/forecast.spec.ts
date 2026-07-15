@@ -92,7 +92,7 @@ describe('useForecastStore', () => {
 
     // Assert
     expect(mockPost).not.toHaveBeenCalled()
-    expect(store.status).toBe('missing')
+    expect(store.status).toBe('error')
     expect(store.error).toContain('bad.json')
   })
 

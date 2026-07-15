@@ -23,9 +23,3 @@ export function parseWindow(w: string): { startMin: number; endMin: number } {
     endMin: parseClock(parts[1] ?? '') ?? 1020,
   }
 }
-
-// ISO date/datetime pair -> "Jul 24 – Jul 30"
-export function formatPtoRange(start: string, end: string): string {
-  const f = (x: string) => new Date(x).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${f(start)} – ${f(end)}`
-}

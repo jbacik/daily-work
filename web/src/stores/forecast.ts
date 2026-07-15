@@ -35,6 +35,7 @@ export const useForecastStore = defineStore('forecast', () => {
     try {
       parsed = JSON.parse(content)
     } catch {
+      status.value = 'error'
       error.value = `'${name}' is not valid JSON`
       return
     }
