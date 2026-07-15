@@ -26,10 +26,9 @@ const max = computed(() => {
 
 <template>
   <div class="bg-card border border-border p-4" data-testid="shape-panel">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="text-accent">&gt;&gt;&gt;</span>
-      <span class="text-muted-foreground text-xs uppercase tracking-wider">Today's Shape</span>
-      <span class="ml-auto text-muted-foreground text-xs">{{ forecast.workdayWindow }}</span>
+    <div class="flex items-baseline justify-between border-b border-dashed border-border pb-2 mb-4">
+      <span class="text-accent font-bold uppercase tracking-wider">Today's Shape</span>
+      <span class="text-muted-foreground text-xs">{{ forecast.workdayWindow }}</span>
     </div>
 
     <div class="flex flex-col gap-3">
@@ -39,7 +38,7 @@ const max = computed(() => {
         :target="targets.meetingHours"
         :max="max"
         :meta="`${fmtHrs(forecast.meetings.totalHours)} &middot; ${forecast.meetings.count}`"
-        fill-class="bg-muted-foreground"
+        fill-class="bg-accent"
         data-testid="meet-bar"
       />
       <SolidBar

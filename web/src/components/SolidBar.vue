@@ -17,8 +17,15 @@ const targetPct = computed(() =>
 
 <template>
   <div class="flex items-center gap-3 text-sm">
-    <span class="w-12 shrink-0 text-muted-foreground">{{ label }}</span>
-    <div class="relative flex-1 h-4 border border-border bg-background">
+    <span class="w-12 shrink-0 text-muted-foreground text-xs uppercase tracking-wider">{{ label }}</span>
+    <div
+      class="relative flex-1 h-4 border border-border"
+      :style="{
+        backgroundImage: 'radial-gradient(var(--color-muted-foreground) 0.8px, transparent 0.8px)',
+        backgroundSize: '5px 5px',
+        backgroundPosition: '0 center',
+      }"
+    >
       <div
         class="absolute inset-y-0 left-0 transition-all"
         :class="fillClass"

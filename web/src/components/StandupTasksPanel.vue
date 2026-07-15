@@ -15,10 +15,9 @@ function carriedDays(task: WorkItem): number {
 
 <template>
   <div class="bg-card border border-border p-4" data-testid="tasks-panel">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="text-accent">&gt;&gt;&gt;</span>
-      <span class="text-muted-foreground text-xs uppercase tracking-wider">Today's Tasks</span>
-      <span class="ml-auto text-muted-foreground text-xs">from main view &middot; read-only</span>
+    <div class="flex items-baseline justify-between border-b border-dashed border-border pb-2 mb-4">
+      <span class="text-accent font-bold uppercase tracking-wider">Today's Tasks</span>
+      <span class="text-muted-foreground text-xs">from main view &middot; read-only</span>
     </div>
 
     <div v-if="tasks.length === 0" class="text-muted-foreground text-sm italic">
