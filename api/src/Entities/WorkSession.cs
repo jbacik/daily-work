@@ -8,6 +8,7 @@ internal class WorkSession
 	public DateTime? ClockedOutAt { get; set; }
 	public DateTime CreatedAt { get; set; }
 	public WorkSessionReflections? Reflections { get; set; }
+	public string? CalendarForecastJson { get; set; }
 }
 
 internal record WorkSessionReflections

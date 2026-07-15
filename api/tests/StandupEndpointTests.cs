@@ -248,6 +248,85 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 	}
 
 	[Fact]
+	public async Task GenerateStandup_IncludesForecastInPrompt_WhenForecastStored()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		var forecastJson = """{"date":"2020-01-15","syncMeetings":["Ali / Jared"],"upcomingPTO":[]}""";
+		await _client.PostAsJsonAsync("/api/forecast?date=2020-01-15", new { Json = forecastJson });
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Forecast prompt item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("Daily calendar forecast:");
+		userMessage.ShouldContain("Ali / Jared");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_OmitsForecastSection_WhenNoForecastStored()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "No forecast item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldNotContain("Daily calendar forecast");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_OmitsForecast_WhenWeeklyCommandType()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		var forecastJson = """{"date":"2020-01-15","syncMeetings":["Ali / Jared"],"upcomingPTO":[]}""";
+		await _client.PostAsJsonAsync("/api/forecast?date=2020-01-15", new { Json = forecastJson });
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Weekly forecast item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15&commandType=weekly", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldNotContain("Daily calendar forecast");
+	}
+
+	[Fact]
 	public async Task GetStandup_ReturnsEntryForSpecificDate_WhenMultipleDatesExist()
 	{
 		// Arrange: save standups for two different dates

@@ -88,4 +88,44 @@ public class StandupPromptTests
 		message.ShouldContain("Learning queue items consumed this week");
 		message.ShouldContain(learningJson);
 	}
+
+	[Fact]
+	public void BuildUserMessage_AppendsForecastSection_WhenForecastProvided()
+	{
+		var workJson = """[{"id":1,"title":"Test"}]""";
+		var forecastJson = """{"syncMeetings":["Ali / Jared"],"upcomingPTO":[]}""";
+
+		var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-07", "2026-04-06", null, forecastJson);
+
+		message.ShouldContain("Daily calendar forecast:");
+		message.ShouldContain(forecastJson);
+	}
+
+	[Fact]
+	public void BuildUserMessage_OmitsForecastSection_WhenForecastNull()
+	{
+		var workJson = """[{"id":1,"title":"Test"}]""";
+
+		var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-07", "2026-04-06");
+
+		message.ShouldNotContain("Daily calendar forecast");
+	}
+
+	[Fact]
+	public void GetSystemPrompt_MentionsUpcomingPTO_WhenMidWeek()
+	{
+		var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Tuesday);
+
+		prompt.ShouldContain("upcomingPTO");
+		prompt.ShouldContain("syncMeetings");
+	}
+
+	[Fact]
+	public void GetSystemPrompt_MentionsUpcomingPTO_WhenFriday()
+	{
+		var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Friday);
+
+		prompt.ShouldContain("upcomingPTO");
+		prompt.ShouldContain("syncMeetings");
+	}
 }
