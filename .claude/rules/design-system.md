@@ -32,6 +32,7 @@ All colors are OKLCH CSS variables defined in `:root` and exposed to Tailwind as
 | `muted-foreground` | `oklch(0.55 0.05 255)` | Secondary text, labels, placeholders, inactive |
 | `accent` | `oklch(0.7 0.18 55)` | **Golden highlight** — `>>>`, emphasis, the "one thing", key numbers |
 | `accent-foreground` | `oklch(0.2 0.05 55)` | Text on accent fills |
+| `lunch` | `oklch(0.72 0.13 95)` | Muted mustard-gold — recommended lunch block on the standup forecast timeline; a distinct gold so it doesn't read as `accent` |
 | `success` | `oklch(0.50 0.09 155)` | Completion flashes (used via `animate-success-flash`) |
 | `destructive` | `oklch(0.55 0.2 25)` | Delete actions, errors |
 | `border` | `oklch(0.8 0.02 255)` | Every border, every divider |
