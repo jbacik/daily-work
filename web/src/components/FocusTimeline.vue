@@ -93,7 +93,7 @@ const hourTicks = computed(() => {
           v-for="(seg, j) in cell.segments"
           :key="j"
           class="absolute inset-y-0"
-          :class="seg.kind === 'lunch' ? 'bg-accent' : 'bg-primary'"
+          :class="seg.kind === 'lunch' ? 'bg-lunch' : 'bg-primary'"
           :style="{ left: `${seg.leftPct}%`, width: `${seg.widthPct}%` }"
           :data-kind="seg.kind"
         />

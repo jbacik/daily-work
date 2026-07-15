@@ -59,7 +59,7 @@ const max = computed(() => {
       <div class="text-xs text-muted-foreground mb-2 tracking-wide">
         focus blocks across the day &middot; 30-min increments
         <span v-if="forecast.recommendedLunch">
-          &middot; lunch <span class="text-accent">{{ forecast.recommendedLunch }}</span>
+          &middot; lunch <span class="text-lunch">{{ forecast.recommendedLunch }}</span>
         </span>
       </div>
       <FocusTimeline
@@ -72,7 +72,7 @@ const max = computed(() => {
           <i class="inline-block w-3 h-3 bg-primary" /> focus
         </span>
         <span class="inline-flex items-center gap-1.5">
-          <i class="inline-block w-3 h-3 bg-accent" /> lunch
+          <i class="inline-block w-3 h-3 bg-lunch" /> lunch
         </span>
         <span class="inline-flex items-center gap-1.5">
           <i class="inline-block w-3 h-3 border border-border" /> open / meetings
