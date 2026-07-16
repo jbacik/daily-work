@@ -8,6 +8,7 @@ using DailyWork.Api.Enums;
 using DailyWork.Api.Prompts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace DailyWork.Api.Endpoints;
 
@@ -120,6 +121,7 @@ internal static class StandupEndpoints
 			AppDbContext db,
 			IDateTimeProvider dateTime,
 			IChatCompletionService? chatService,
+			ILoggerFactory loggerFactory,
 			string? weekOf,
 			string? commandType,
 			DateOnly? today) =>
@@ -151,12 +153,22 @@ internal static class StandupEndpoints
 			if (items.Count == 0)
 				return Results.BadRequest("No work items found for the specified week.");
 
-			// For Monday prompts or weekly command, also fetch previous week's items
 			var dayOfWeek = todayDate.DayOfWeek;
 			var useWeeklyPrompt = string.Equals(commandType, "weekly", StringComparison.OrdinalIgnoreCase);
+			// Monday daily standups keep the legacy raw-items message until the Monday prompt exists.
+			var useLegacyWeeklyShape = useWeeklyPrompt || dayOfWeek == DayOfWeek.Monday;
 
-			if (dayOfWeek == DayOfWeek.Monday || useWeeklyPrompt)
+			var systemPrompt = useWeeklyPrompt
+				? StandupPrompts.GetSystemPrompt(DayOfWeek.Monday)
+				: StandupPrompts.GetSystemPrompt(dayOfWeek);
+
+			var todayStr = todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+			var yesterdayStr = yesterdayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+			string userMessage;
+			if (useLegacyWeeklyShape)
 			{
+				// Monday/weekly reflect back on the previous week, so include its items too
 				var prevWeek = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture)
 					.AddDays(-7)
 					.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -169,51 +181,59 @@ internal static class StandupEndpoints
 					.ToListAsync();
 
 				items = [.. prevItems, .. items];
+				var workItemsJson = JsonSerializer.Serialize(items, JsonOptions);
+				userMessage = StandupPrompts.BuildWeeklyUserMessage(workItemsJson, todayStr, yesterdayStr);
 			}
-
-			var workItemsJson = JsonSerializer.Serialize(items, JsonOptions);
-			var systemPrompt = useWeeklyPrompt
-				? StandupPrompts.GetSystemPrompt(DayOfWeek.Monday)
-				: StandupPrompts.GetSystemPrompt(dayOfWeek);
-
-			// On Fridays, fetch consumed learning queue items for the week
-			string? learningQueueJson = null;
-			if (dayOfWeek == DayOfWeek.Friday && !useWeeklyPrompt)
+			else
 			{
-				var weekStart = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture);
-				var consumedItems = await db.ReadWatchItems
-					.AsNoTracking()
-					.Where(r => r.IsDone && r.WeekConsumed == weekStart
-						&& (r.Type == Enums.ReadWatchType.Experiment || r.WorthSharing == true))
-					.OrderByDescending(r => r.Type == Enums.ReadWatchType.Experiment)
-					.ThenByDescending(r => r.WorthSharing)
-					.ToListAsync();
+				var logger = loggerFactory.CreateLogger(nameof(StandupEndpoints));
 
-				if (consumedItems.Count > 0)
-					learningQueueJson = JsonSerializer.Serialize(consumedItems, JsonOptions);
-			}
-
-			// Include today's calendar forecast (persisted by the planning modal) for daily standups
-			string? forecastJson = null;
-			if (!useWeeklyPrompt)
-			{
-				forecastJson = await db.WorkSessions
+				// Today's calendar forecast (persisted by the planning modal), trimmed to the
+				// two fields the prompt uses
+				var forecastJson = await db.WorkSessions
 					.AsNoTracking()
 					.Where(s => s.Date == todayDate)
 					.Select(s => s.CalendarForecastJson)
 					.FirstOrDefaultAsync();
+				var forecast = StandupContextBuilder.TryParseForecast(forecastJson, logger);
+
+				var context = StandupContextBuilder.Build(items, todayDate, yesterdayDate, forecast);
+				var contextJson = JsonSerializer.Serialize(context, JsonOptions);
+
+				// Exclude the opener used in yesterday's saved standup so it never repeats back-to-back
+				var previousMarkdown = await db.UpdateComms
+					.AsNoTracking()
+					.Where(c => c.CommType == CommType.DailyStandup && c.Date == yesterdayDate)
+					.Select(c => c.Markdown)
+					.FirstOrDefaultAsync();
+				var opener = StandupPrompts.PickOpener(context.Yesterday.OneThing?.Status, previousMarkdown);
+
+				// On Fridays, fetch consumed learning queue items for the week
+				string? learningQueueJson = null;
+				if (dayOfWeek == DayOfWeek.Friday)
+				{
+					var weekStart = DateOnly.Parse(weekOf, CultureInfo.InvariantCulture);
+					var consumedItems = await db.ReadWatchItems
+						.AsNoTracking()
+						.Where(r => r.IsDone && r.WeekConsumed == weekStart
+							&& (r.Type == Enums.ReadWatchType.Experiment || r.WorthSharing == true))
+						.OrderByDescending(r => r.Type == Enums.ReadWatchType.Experiment)
+						.ThenByDescending(r => r.WorthSharing)
+						.ToListAsync();
+
+					if (consumedItems.Count > 0)
+						learningQueueJson = JsonSerializer.Serialize(consumedItems, JsonOptions);
+				}
+
+				userMessage = StandupPrompts.BuildUserMessage(todayStr, yesterdayStr, contextJson, opener, learningQueueJson);
 			}
 
 			var chatHistory = new ChatHistory();
 			chatHistory.AddSystemMessage(systemPrompt);
-			chatHistory.AddUserMessage(StandupPrompts.BuildUserMessage(
-				workItemsJson,
-				todayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-				yesterdayDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-				learningQueueJson,
-				forecastJson));
+			chatHistory.AddUserMessage(userMessage);
 
-			var response = await chatService.GetChatMessageContentAsync(chatHistory);
+			var settings = new OpenAIPromptExecutionSettings { Temperature = 0.35 };
+			var response = await chatService.GetChatMessageContentAsync(chatHistory, settings);
 
 			return Results.Ok(new { markdown = response.Content });
 		});

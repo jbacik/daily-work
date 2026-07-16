@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DailyWork.Api.Prompts;
 using DailyWork.Api.Tests.Fixtures;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Shouldly;
 using Xunit;
 
@@ -248,7 +250,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 	}
 
 	[Fact]
-	public async Task GenerateStandup_IncludesForecastInPrompt_WhenForecastStored()
+	public async Task GenerateStandup_IncludesSyncMeetingsInContext_WhenForecastStored()
 	{
 		// Arrange
 		_factory.ChatCompletionService.ResponseContent = "ok";
@@ -271,12 +273,12 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		var userMessage = _factory.ChatCompletionService.LastChatHistory!
 			.Last(m => m.Role == AuthorRole.User)
 			.Content!;
-		userMessage.ShouldContain("Daily calendar forecast:");
-		userMessage.ShouldContain("Ali / Jared");
+		userMessage.ShouldContain("Standup context:");
+		userMessage.ShouldContain("\"syncMeetings\":[\"Ali / Jared\"]");
 	}
 
 	[Fact]
-	public async Task GenerateStandup_OmitsForecastSection_WhenNoForecastStored()
+	public async Task GenerateStandup_SendsEmptyForecastArrays_WhenNoForecastStored()
 	{
 		// Arrange
 		_factory.ChatCompletionService.ResponseContent = "ok";
@@ -296,7 +298,8 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		var userMessage = _factory.ChatCompletionService.LastChatHistory!
 			.Last(m => m.Role == AuthorRole.User)
 			.Content!;
-		userMessage.ShouldNotContain("Daily calendar forecast");
+		userMessage.ShouldContain("\"syncMeetings\":[]");
+		userMessage.ShouldContain("\"upcomingPTO\":[]");
 	}
 
 	[Fact]
@@ -323,7 +326,194 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		var userMessage = _factory.ChatCompletionService.LastChatHistory!
 			.Last(m => m.Role == AuthorRole.User)
 			.Content!;
-		userMessage.ShouldNotContain("Daily calendar forecast");
+		userMessage.ShouldNotContain("Ali / Jared");
+		userMessage.ShouldNotContain("Standup context:");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_IncludesWeeklyGoalInContext_WhenBigThingExists()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Insights platform buildout",
+			Category = "BigThing",
+			Date = "2020-01-13",
+		});
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Goal test item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("\"weeklyGoal\":\"Insights platform buildout\"");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_SetsWeeklyGoalNull_WhenNoBigThing()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "No goal item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("\"weeklyGoal\":null");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_InjectsOpener_WhenYesterdayItemExists()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Unfinished yesterday item",
+			Category = "SmallThing",
+			Date = "2020-01-14",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert — item is not done, so the opener comes from the NotDone bucket
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("Open the first answer with exactly:");
+		StandupPrompts.NotDoneOpeners
+			.Any(o => userMessage.Contains($"Open the first answer with exactly: \"{o}\""))
+			.ShouldBeTrue();
+	}
+
+	[Fact]
+	public async Task GenerateStandup_OmitsOpener_WhenNoYesterdayItems()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Today only item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldNotContain("Open the first answer");
+	}
+
+	[Fact]
+	public async Task GenerateStandup_MarksOneThingCarried_WhenYesterdayItemMovedToToday()
+	{
+		// Arrange — create an item dated yesterday, then move it to today
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		var createResponse = await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Carried item",
+			Category = "SmallThing",
+			Date = "2020-01-14",
+		});
+		var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		var id = created.GetProperty("id").GetInt32();
+
+		await _client.PatchAsJsonAsync($"/api/work-items/{id}/move", new { Date = "2020-01-15" });
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert — the moved item is yesterday's One Thing with carried status, opener from Partial bucket
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("""{"title":"Carried item","status":"carried"}""");
+		StandupPrompts.PartialOpeners
+			.Any(o => userMessage.Contains($"Open the first answer with exactly: \"{o}\""))
+			.ShouldBeTrue();
+	}
+
+	[Fact]
+	public async Task GenerateStandup_PassesTemperature_WhenGenerating()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Temperature test item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var settings = _factory.ChatCompletionService.LastExecutionSettings
+			.ShouldBeOfType<OpenAIPromptExecutionSettings>();
+		settings.Temperature.ShouldBe(0.35);
+	}
+
+	[Fact]
+	public async Task GenerateStandup_SendsEmptyForecastArrays_WhenForecastNotAnObject()
+	{
+		// Arrange — the forecast endpoint only validates that the text is JSON, so a
+		// non-object payload can reach the standup parser
+		_factory.ChatCompletionService.ResponseContent = "ok";
+
+		await _client.PostAsJsonAsync("/api/forecast?date=2020-01-15", new { Json = "[1,2,3]" });
+
+		await _client.PostAsJsonAsync("/api/work-items", new
+		{
+			Title = "Bad forecast item",
+			Category = "SmallThing",
+			Date = "2020-01-15",
+		});
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert — generation still succeeds with empty forecast data
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var userMessage = _factory.ChatCompletionService.LastChatHistory!
+			.Last(m => m.Role == AuthorRole.User)
+			.Content!;
+		userMessage.ShouldContain("\"syncMeetings\":[]");
 	}
 
 	[Fact]
