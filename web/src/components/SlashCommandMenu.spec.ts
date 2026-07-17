@@ -72,6 +72,18 @@ describe('SlashCommandMenu', () => {
     wrapper.unmount()
   })
 
+  it('SlashCommandMenu_FocusesFirstItem_WhenOpened', async () => {
+    const wrapper = mountComponent()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }))
+    await nextTick()
+    await nextTick()
+
+    expect(document.activeElement).toBe(wrapper.find('[data-testid="cmd-standup"]').element)
+
+    wrapper.unmount()
+  })
+
   it('SlashCommandMenu_EmitsCommand_WhenStandupClicked', async () => {
     const wrapper = mountComponent()
 
