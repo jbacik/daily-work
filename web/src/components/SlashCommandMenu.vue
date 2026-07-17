@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { CommandType } from '@/types'
 import { getRecentWeekStarts, formatWeekRange } from '@/utils/week'
 
@@ -11,6 +11,13 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const archiveOpen = ref(false)
 const panelRef = ref<HTMLDivElement | null>(null)
+const firstCommandRef = ref<HTMLButtonElement | null>(null)
+
+watch(isOpen, async (open) => {
+  if (!open) return
+  await nextTick()
+  firstCommandRef.value?.focus()
+})
 
 const recentWeeks = getRecentWeekStarts(5)
 
@@ -88,6 +95,7 @@ onUnmounted(() => {
 
         <div class="space-y-2">
           <button
+            ref="firstCommandRef"
             data-testid="cmd-standup"
             class="w-full text-left px-2 py-1 hover:bg-secondary/50 transition-colors"
             @click="handleCommandClick('standup')"
