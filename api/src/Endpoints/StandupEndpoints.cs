@@ -20,6 +20,15 @@ internal static class StandupEndpoints
 		Converters = { new JsonStringEnumConverter() },
 	};
 
+	// The standup context is serialized without null members so a small model never sees a
+	// literal "null" (e.g. an absent weeklyGoal or oneThing) that it would otherwise echo verbatim.
+	private static readonly JsonSerializerOptions ContextJsonOptions = new()
+	{
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		Converters = { new JsonStringEnumConverter() },
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+	};
+
 	public static RouteGroupBuilder MapStandupEndpoints(this WebApplication app)
 	{
 		var group = app.MapGroup("/api/standup");
@@ -198,7 +207,7 @@ internal static class StandupEndpoints
 				var forecast = StandupContextBuilder.TryParseForecast(forecastJson, logger);
 
 				var context = StandupContextBuilder.Build(items, todayDate, yesterdayDate, forecast);
-				var contextJson = JsonSerializer.Serialize(context, JsonOptions);
+				var contextJson = JsonSerializer.Serialize(context, ContextJsonOptions);
 
 				// Exclude the opener used in yesterday's saved standup so it never repeats back-to-back
 				var previousMarkdown = await db.UpdateComms
@@ -225,7 +234,7 @@ internal static class StandupEndpoints
 						learningQueueJson = JsonSerializer.Serialize(consumedItems, JsonOptions);
 				}
 
-				userMessage = StandupPrompts.BuildUserMessage(todayStr, yesterdayStr, contextJson, opener, learningQueueJson);
+				userMessage = StandupPrompts.BuildUserMessage(todayStr, yesterdayStr, contextJson, opener, context.WeeklyGoal, learningQueueJson);
 			}
 
 			var chatHistory = new ChatHistory();

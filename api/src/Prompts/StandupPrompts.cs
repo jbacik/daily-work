@@ -56,11 +56,17 @@ internal static class StandupPrompts
 		string yesterday,
 		string standupContextJson,
 		string? opener,
+		string? weeklyGoal,
 		string? learningQueueJson = null)
 	{
 		var message = $"Today's date: {today}\nYesterday's date: {yesterday}\n\nStandup context:\n{standupContextJson}";
 		if (opener is not null)
 			message += $"\n\nOpen the first answer with exactly: \"{opener}\"";
+		// Inject the weekly-goal decision as an explicit directive rather than trusting the model to
+		// read it off the JSON — a small model otherwise fills the goal slot with the literal "null".
+		message += weeklyGoal is not null
+			? $"\n\nFor question 2, tie today's One Thing to this exact weekly goal: \"{weeklyGoal}\"."
+			: "\n\nThere is no weekly goal this week — for question 2, state only today's One Thing and do not mention a weekly goal at all.";
 		if (learningQueueJson is not null)
 			message += $"\n\nLearning queue items consumed this week:\n{learningQueueJson}";
 		return message;
@@ -72,7 +78,7 @@ internal static class StandupPrompts
 	private static string GetMidWeekPrompt() => string.Join("\n\n",
 		Intro(3),
 		ContextFieldsBlock,
-		OutputStructureLine,
+		OutputRules(3),
 		QuestionOneBlock,
 		QuestionTwoBlock,
 		PtoQuestionBlock,
@@ -82,7 +88,7 @@ internal static class StandupPrompts
 		Intro(4),
 		ContextFieldsBlock,
 		LearningQueueFieldsBlock,
-		OutputStructureLine,
+		OutputRules(4),
 		QuestionOneBlock,
 		QuestionTwoBlock,
 		PtoQuestionBlock,
@@ -107,8 +113,12 @@ internal static class StandupPrompts
         Status meanings: "done" = completed, "skipped" = intentionally skipped, "carried" = not finished and moved to a later day, "notDone" = not completed.
         """;
 
-	private const string OutputStructureLine =
-		"Output exactly this structure (use ### for each question heading):";
+	private static string OutputRules(int questionCount) => $"""
+        Output format — these rules are absolute and apply to EVERY question:
+        - Emit all {questionCount} headings below exactly as written, each on its own line starting with "### ", in order. Output all {questionCount} even when an answer is short, negative, or "No".
+        - Write each answer on the line(s) directly beneath its own heading. Never merge answers together, never drop a heading, never leave a heading with no answer under it.
+        - Never print raw field values such as "notDone", "carried", "skipped", or "null" — always express them in natural first-person language.
+        """;
 
 	private const string QuestionOneBlock = """
         ### Did you complete your One Thing yesterday?
@@ -116,18 +126,18 @@ internal static class StandupPrompts
 
         Smaller stuff: knocked out **<done item title>**, carried **<carried item title>**.
 
-        The first line addresses ONLY yesterday.oneThing. Open with exactly the opener line provided in the user message, verbatim, then finish the sentence to match yesterday.oneThing's status. If yesterday.oneThing is null (no opener provided), open with one short neutral line saying nothing was tracked yesterday.
-        Then a BLANK LINE, then a "Smaller stuff:" line summarizing yesterday.others — describe "carried" items as carried. Omit the "Smaller stuff:" line entirely when yesterday.others is empty.
+        The answer under this heading addresses ONLY yesterday.oneThing. Begin with exactly the opener line provided in the user message, verbatim, then one short clause reflecting its status (done / still in progress / not done). If yesterday.oneThing is null, the entire answer under this heading is exactly: Nothing tracked yesterday. (Still keep the heading above it.)
+        Then, only when yesterday.others is non-empty, a BLANK LINE and a "Smaller stuff:" line summarizing them — describe "carried" items as carried. Omit the "Smaller stuff:" line entirely when yesterday.others is empty.
         """;
 
 	private const string QuestionTwoBlock = """
         ### What's the One Thing you will complete today in service of the weekly goal?
-        **<today one thing title>**, feeding the weekly goal of **<weeklyGoal>**.
+        **<today one thing title>**, in service of the weekly goal of **<weeklyGoal>**.
 
         Also on deck: <alsoOnDeck titles>, plus syncs: <syncMeetings>.
 
-        The first line is ONLY today.oneThing tied back to the weekly goal — use the exact weeklyGoal value from the context, never a goal from an example. If weeklyGoal is null, omit the weekly-goal clause entirely; do not invent one.
-        Then a BLANK LINE, then "Also on deck:" listing today.alsoOnDeck.
+        The first line states today.oneThing. If the context has a weeklyGoal value, tie it in using that exact value (never a goal from an example). If weeklyGoal is absent, state ONLY today.oneThing and stop the sentence there — do not write the words "weekly goal", and never write "null".
+        Then a BLANK LINE, then "Also on deck:" listing today.alsoOnDeck (say "nothing else" when it is empty).
         If syncMeetings is non-empty, fold them into the "Also on deck:" line as syncs (e.g. ", plus syncs: Ali / Jared"). Do not repeat a sync that already appears as a task, and do not invent syncs when syncMeetings is empty.
         """;
 

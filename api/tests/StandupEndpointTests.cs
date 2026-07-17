@@ -361,7 +361,7 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 	}
 
 	[Fact]
-	public async Task GenerateStandup_SetsWeeklyGoalNull_WhenNoBigThing()
+	public async Task GenerateStandup_OmitsGoalAndInjectsNoGoalDirective_WhenNoBigThing()
 	{
 		// Arrange
 		_factory.ChatCompletionService.ResponseContent = "ok";
@@ -381,7 +381,9 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		var userMessage = _factory.ChatCompletionService.LastChatHistory!
 			.Last(m => m.Role == AuthorRole.User)
 			.Content!;
-		userMessage.ShouldContain("\"weeklyGoal\":null");
+		// Null members are omitted from the payload so a small model never echoes a literal "null".
+		userMessage.ShouldNotContain("\"weeklyGoal\"");
+		userMessage.ShouldContain("no weekly goal this week");
 	}
 
 	[Fact]

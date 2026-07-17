@@ -66,7 +66,7 @@ public class StandupPromptTests
 	{
 		var contextJson = """{"weeklyGoal":"Test goal"}""";
 
-		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", contextJson, null);
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", contextJson, null, "Test goal");
 
 		message.ShouldContain("Today's date: 2026-04-07");
 		message.ShouldContain("Yesterday's date: 2026-04-06");
@@ -81,7 +81,7 @@ public class StandupPromptTests
 		var contextJson = """{"weeklyGoal":"Test goal"}""";
 		var learningJson = """[{"title":"Cool experiment","type":"Experiment"}]""";
 
-		var message = StandupPrompts.BuildUserMessage("2026-04-10", "2026-04-09", contextJson, null, learningJson);
+		var message = StandupPrompts.BuildUserMessage("2026-04-10", "2026-04-09", contextJson, null, "Test goal", learningJson);
 
 		message.ShouldContain("Today's date: 2026-04-10");
 		message.ShouldContain("Yesterday's date: 2026-04-09");
@@ -93,7 +93,7 @@ public class StandupPromptTests
 	[Fact]
 	public void BuildUserMessage_IncludesOpenerLine_WhenOpenerProvided()
 	{
-		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", "Crushed it.");
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", "Crushed it.", "Test goal");
 
 		message.ShouldContain("Open the first answer with exactly: \"Crushed it.\"");
 	}
@@ -101,9 +101,26 @@ public class StandupPromptTests
 	[Fact]
 	public void BuildUserMessage_OmitsOpenerLine_WhenOpenerNull()
 	{
-		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null);
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, "Test goal");
 
 		message.ShouldNotContain("Open the first answer");
+	}
+
+	[Fact]
+	public void BuildUserMessage_InjectsWeeklyGoalDirective_WhenGoalProvided()
+	{
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, "Data Products support");
+
+		message.ShouldContain("tie today's One Thing to this exact weekly goal: \"Data Products support\"");
+	}
+
+	[Fact]
+	public void BuildUserMessage_InjectsNoGoalDirective_WhenGoalNull()
+	{
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, null);
+
+		message.ShouldContain("no weekly goal this week");
+		message.ShouldNotContain("null");
 	}
 
 	[Fact]
