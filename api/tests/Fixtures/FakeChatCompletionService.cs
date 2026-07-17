@@ -7,6 +7,7 @@ public class FakeChatCompletionService : IChatCompletionService
 {
 	public string ResponseContent { get; set; } = "**Mock standup response**";
 	public ChatHistory? LastChatHistory { get; private set; }
+	public PromptExecutionSettings? LastExecutionSettings { get; private set; }
 
 	public IReadOnlyDictionary<string, object?> Attributes { get; } = new Dictionary<string, object?>();
 
@@ -17,6 +18,7 @@ public class FakeChatCompletionService : IChatCompletionService
 		CancellationToken cancellationToken = default)
 	{
 		LastChatHistory = chatHistory;
+		LastExecutionSettings = executionSettings;
 		IReadOnlyList<ChatMessageContent> result = [new ChatMessageContent(AuthorRole.Assistant, ResponseContent)];
 		return Task.FromResult(result);
 	}

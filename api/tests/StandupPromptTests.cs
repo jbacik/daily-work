@@ -64,51 +64,150 @@ public class StandupPromptTests
 	[Fact]
 	public void BuildUserMessage_IncludesTodayAndYesterdayAndJson()
 	{
-		var json = """[{"id":1,"title":"Test"}]""";
+		var contextJson = """{"weeklyGoal":"Test goal"}""";
 
-		var message = StandupPrompts.BuildUserMessage(json, "2026-04-07", "2026-04-06");
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", contextJson, null, "Test goal");
 
 		message.ShouldContain("Today's date: 2026-04-07");
 		message.ShouldContain("Yesterday's date: 2026-04-06");
-		message.ShouldContain(json);
+		message.ShouldContain("Standup context:");
+		message.ShouldContain(contextJson);
 		message.ShouldNotContain("Learning queue");
 	}
 
 	[Fact]
 	public void BuildUserMessage_IncludesLearningQueue_WhenProvided()
 	{
-		var workJson = """[{"id":1,"title":"Test"}]""";
+		var contextJson = """{"weeklyGoal":"Test goal"}""";
 		var learningJson = """[{"title":"Cool experiment","type":"Experiment"}]""";
 
-		var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-10", "2026-04-09", learningJson);
+		var message = StandupPrompts.BuildUserMessage("2026-04-10", "2026-04-09", contextJson, null, "Test goal", learningJson);
 
 		message.ShouldContain("Today's date: 2026-04-10");
 		message.ShouldContain("Yesterday's date: 2026-04-09");
-		message.ShouldContain(workJson);
+		message.ShouldContain(contextJson);
 		message.ShouldContain("Learning queue items consumed this week");
 		message.ShouldContain(learningJson);
 	}
 
 	[Fact]
-	public void BuildUserMessage_AppendsForecastSection_WhenForecastProvided()
+	public void BuildUserMessage_IncludesOpenerLine_WhenOpenerProvided()
 	{
-		var workJson = """[{"id":1,"title":"Test"}]""";
-		var forecastJson = """{"syncMeetings":["Ali / Jared"],"upcomingPTO":[]}""";
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", "Crushed it.", "Test goal");
 
-		var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-07", "2026-04-06", null, forecastJson);
-
-		message.ShouldContain("Daily calendar forecast:");
-		message.ShouldContain(forecastJson);
+		message.ShouldContain("Open the first answer with exactly: \"Crushed it.\"");
 	}
 
 	[Fact]
-	public void BuildUserMessage_OmitsForecastSection_WhenForecastNull()
+	public void BuildUserMessage_OmitsOpenerLine_WhenOpenerNull()
+	{
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, "Test goal");
+
+		message.ShouldNotContain("Open the first answer");
+	}
+
+	[Fact]
+	public void BuildUserMessage_InjectsWeeklyGoalDirective_WhenGoalProvided()
+	{
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, "Data Products support");
+
+		message.ShouldContain("tie today's One Thing to this exact weekly goal: \"Data Products support\"");
+	}
+
+	[Fact]
+	public void BuildUserMessage_InjectsNoGoalDirective_WhenGoalNull()
+	{
+		var message = StandupPrompts.BuildUserMessage("2026-04-07", "2026-04-06", "{}", null, null);
+
+		message.ShouldContain("no weekly goal this week");
+		message.ShouldNotContain("null");
+	}
+
+	[Fact]
+	public void BuildWeeklyUserMessage_IncludesDatesAndWorkItems()
 	{
 		var workJson = """[{"id":1,"title":"Test"}]""";
 
-		var message = StandupPrompts.BuildUserMessage(workJson, "2026-04-07", "2026-04-06");
+		var message = StandupPrompts.BuildWeeklyUserMessage(workJson, "2026-04-07", "2026-04-06");
 
-		message.ShouldNotContain("Daily calendar forecast");
+		message.ShouldContain("Today's date: 2026-04-07");
+		message.ShouldContain("Yesterday's date: 2026-04-06");
+		message.ShouldContain("Work items:");
+		message.ShouldContain(workJson);
+	}
+
+	[Fact]
+	public void PickOpener_ReturnsDoneBucketOpener_WhenStatusDone()
+	{
+		var opener = StandupPrompts.PickOpener("done", null);
+
+		StandupPrompts.DoneOpeners.ShouldContain(opener);
+	}
+
+	[Fact]
+	public void PickOpener_ReturnsPartialBucketOpener_WhenStatusCarried()
+	{
+		var opener = StandupPrompts.PickOpener("carried", null);
+
+		StandupPrompts.PartialOpeners.ShouldContain(opener);
+	}
+
+	[Fact]
+	public void PickOpener_ReturnsNotDoneBucketOpener_WhenStatusSkipped()
+	{
+		var opener = StandupPrompts.PickOpener("skipped", null);
+
+		StandupPrompts.NotDoneOpeners.ShouldContain(opener);
+	}
+
+	[Fact]
+	public void PickOpener_ReturnsNull_WhenStatusNull()
+	{
+		var opener = StandupPrompts.PickOpener(null, null);
+
+		opener.ShouldBeNull();
+	}
+
+	[Fact]
+	public void PickOpener_ExcludesPreviousOpener_WhenPresentInMarkdown()
+	{
+		var previousMarkdown = "### Did you complete your One Thing yesterday?\nCrushed it. — got **Thing** done.";
+
+		for (var i = 0; i < 50; i++)
+		{
+			var opener = StandupPrompts.PickOpener("done", previousMarkdown);
+
+			opener.ShouldNotBe("Crushed it.");
+			StandupPrompts.DoneOpeners.ShouldContain(opener);
+		}
+	}
+
+	[Fact]
+	public void PickOpener_FallsBackToFullBucket_WhenAllOpenersInPreviousMarkdown()
+	{
+		var previousMarkdown = string.Join(" ", StandupPrompts.DoneOpeners);
+
+		var opener = StandupPrompts.PickOpener("done", previousMarkdown);
+
+		StandupPrompts.DoneOpeners.ShouldContain(opener);
+	}
+
+	[Fact]
+	public void GetSystemPrompt_OmitsConcreteExampleGoal_WhenMidWeek()
+	{
+		var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Tuesday);
+
+		prompt.ShouldNotContain("Data Products support");
+		prompt.ShouldContain("never a goal from an example");
+	}
+
+	[Fact]
+	public void GetSystemPrompt_OmitsConcreteExampleGoal_WhenFriday()
+	{
+		var prompt = StandupPrompts.GetSystemPrompt(DayOfWeek.Friday);
+
+		prompt.ShouldNotContain("Data Products support");
+		prompt.ShouldContain("never a goal from an example");
 	}
 
 	[Fact]
