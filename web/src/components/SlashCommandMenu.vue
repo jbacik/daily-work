@@ -16,6 +16,7 @@ const firstCommandRef = ref<HTMLButtonElement | null>(null)
 watch(isOpen, async (open) => {
   if (!open) return
   await nextTick()
+  if (!isOpen.value) return
   firstCommandRef.value?.focus()
 })
 
