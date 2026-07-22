@@ -82,13 +82,24 @@ internal static class WorkSessionEndpoints
 
 		group.MapPut("/", async (AppDbContext db, IDateTimeProvider dateTime, PunchWorkSessionDto dto, DateOnly date) =>
 		{
-			if (dto.ClockedOutAt.HasValue && !dto.ClockedInAt.HasValue)
-				return Results.Problem("Cannot set clock-out without clock-in", statusCode: 422);
-
-			if (dto.ClockedInAt.HasValue && dto.ClockedOutAt.HasValue && dto.ClockedOutAt.Value <= dto.ClockedInAt.Value)
-				return Results.Problem("Clock-out must be after clock-in", statusCode: 422);
-
 			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);
+
+			// Validate the punch pair only when it actually changes. The reflection-save
+			// flows re-send the session's existing timestamps unchanged, and a stored
+			// clock-out-without-clock-in (which the clock-out endpoint legitimately
+			// creates) must not be rejected just because a reflection is being edited.
+			var timesUnchanged = session is not null
+				&& session.ClockedInAt == dto.ClockedInAt
+				&& session.ClockedOutAt == dto.ClockedOutAt;
+
+			if (!timesUnchanged)
+			{
+				if (dto.ClockedOutAt.HasValue && !dto.ClockedInAt.HasValue)
+					return Results.Problem("Cannot set clock-out without clock-in", statusCode: 422);
+
+				if (dto.ClockedInAt.HasValue && dto.ClockedOutAt.HasValue && dto.ClockedOutAt.Value <= dto.ClockedInAt.Value)
+					return Results.Problem("Clock-out must be after clock-in", statusCode: 422);
+			}
 
 			if (session is null)
 			{

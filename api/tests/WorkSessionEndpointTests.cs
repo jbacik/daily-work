@@ -442,6 +442,38 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 	}
 
 	[Fact]
+	public async Task PutPunch_UpdatesReflections_WhenSessionHasClockOutWithoutClockIn()
+	{
+		// Arrange — a clock-out with no prior clock-in creates an out-only session
+		// (a real state the clock-out endpoint produces). The client then reads it
+		// back before editing, exactly as the daily-view reflection modal does.
+		await _client.PostAsJsonAsync(ClockOutUrl, new { });
+		var getResponse = await _client.GetAsync(GetTodayUrl);
+		var seeded = await getResponse.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		seeded.ShouldNotBeNull();
+		seeded.ClockedInAt.ShouldBeNull();
+		seeded.ClockedOutAt.ShouldNotBeNull();
+
+		// Act — echo the existing timestamps and add a reflection (the save flow)
+		var payload = new
+		{
+			ClockedInAt = (DateTime?)null,
+			ClockedOutAt = seeded.ClockedOutAt,
+			Reflections = new { Wins = "Late reflection", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+		var response = await _client.PutAsJsonAsync(PunchUrl, payload);
+
+		// Assert — the echoed clock-out-without-clock-in must not be rejected
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.ClockedInAt.ShouldBeNull();
+		session.ClockedOutAt.ShouldBe(seeded.ClockedOutAt);
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("Late reflection");
+	}
+
+	[Fact]
 	public async Task GetWeek_ReturnsEmptyList_WhenNoSessions()
 	{
 		// Act
