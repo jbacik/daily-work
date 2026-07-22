@@ -17,6 +17,17 @@ internal static class WorkSessionEndpoints
 			return session is null ? Results.NoContent() : Results.Ok(session);
 		});
 
+		group.MapGet("/week", async (AppDbContext db, DateOnly weekOf) =>
+		{
+			var end = weekOf.AddDays(4);
+			var sessions = await db.WorkSessions
+				.AsNoTracking()
+				.Where(s => s.Date >= weekOf && s.Date <= end)
+				.OrderBy(s => s.Date)
+				.ToListAsync();
+			return Results.Ok(sessions);
+		});
+
 		group.MapPost("/clock-in", async (AppDbContext db, IDateTimeProvider dateTime, DateOnly date) =>
 		{
 			var session = await db.WorkSessions.SingleOrDefaultAsync(s => s.Date == date);

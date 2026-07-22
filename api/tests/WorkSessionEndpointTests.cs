@@ -440,4 +440,133 @@ public class WorkSessionEndpointTests : IClassFixture<CustomWebApplicationFactor
 		session.Reflections.Whines.ShouldBeNull();
 		session.Reflections.ValueAdds.ShouldBeNull();
 	}
+
+	[Fact]
+	public async Task GetWeek_ReturnsEmptyList_WhenNoSessions()
+	{
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/week?weekOf=2026-06-08");
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var sessions = await response.Content.ReadFromJsonAsync<List<WorkSession>>(JsonOptions);
+		sessions.ShouldNotBeNull();
+		sessions.ShouldBeEmpty();
+	}
+
+	[Fact]
+	public async Task GetWeek_ReturnsSessionsInRange_WhenSessionsExist()
+	{
+		// Arrange — seed Mon, Wed, Fri of the week starting 2026-06-08 (out of order)
+		await SeedReflectionAsync("2026-06-10", "wed");
+		await SeedReflectionAsync("2026-06-08", "mon");
+		await SeedReflectionAsync("2026-06-12", "fri");
+
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/week?weekOf=2026-06-08");
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var sessions = await response.Content.ReadFromJsonAsync<List<WorkSession>>(JsonOptions);
+		sessions.ShouldNotBeNull();
+		sessions.Count.ShouldBe(3);
+		sessions.Select(s => s.Date).ShouldBe(
+		[
+			new DateOnly(2026, 6, 8),
+			new DateOnly(2026, 6, 10),
+			new DateOnly(2026, 6, 12),
+		]);
+	}
+
+	[Fact]
+	public async Task GetWeek_ExcludesSessionsOutsideRange_WhenAdjacentDaysSeeded()
+	{
+		// Arrange — day before the range, the Sunday before, and the Saturday after
+		await SeedReflectionAsync("2026-06-05", "prior fri");
+		await SeedReflectionAsync("2026-06-07", "sun before");
+		await SeedReflectionAsync("2026-06-13", "sat after");
+
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/week?weekOf=2026-06-08");
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var sessions = await response.Content.ReadFromJsonAsync<List<WorkSession>>(JsonOptions);
+		sessions.ShouldNotBeNull();
+		sessions.ShouldBeEmpty();
+	}
+
+	[Fact]
+	public async Task GetWeek_ReturnsReflections_WhenSessionHasReflections()
+	{
+		// Arrange
+		var payload = new
+		{
+			ClockedInAt = (DateTime?)null,
+			ClockedOutAt = (DateTime?)null,
+			Reflections = new { Wins = "shipped", Whines = "flaky ci", ValueAdds = "mentored" }
+		};
+		await _client.PutAsJsonAsync("/api/work-sessions?date=2026-06-09", payload);
+
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/week?weekOf=2026-06-08");
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var sessions = await response.Content.ReadFromJsonAsync<List<WorkSession>>(JsonOptions);
+		sessions.ShouldNotBeNull();
+		var session = sessions.ShouldHaveSingleItem();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("shipped");
+		session.Reflections.Whines.ShouldBe("flaky ci");
+		session.Reflections.ValueAdds.ShouldBe("mentored");
+	}
+
+	[Fact]
+	public async Task GetWeek_Returns400_WhenWeekOfMissing()
+	{
+		// Act
+		var response = await _client.GetAsync("/api/work-sessions/week");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	public async Task PutPunch_CreatesReflectionOnlySession_WhenNoTimestamps()
+	{
+		// Arrange — the backfill-yesterday flow saves a reflection for a day that
+		// was never clocked in/out; both timestamps are null.
+		var payload = new
+		{
+			ClockedInAt = (DateTime?)null,
+			ClockedOutAt = (DateTime?)null,
+			Reflections = new { Wins = "backfilled", Whines = (string?)null, ValueAdds = (string?)null }
+		};
+
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/work-sessions?date=2026-06-11", payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var session = await response.Content.ReadFromJsonAsync<WorkSession>(JsonOptions);
+		session.ShouldNotBeNull();
+		session.Date.ShouldBe(new DateOnly(2026, 6, 11));
+		session.ClockedInAt.ShouldBeNull();
+		session.ClockedOutAt.ShouldBeNull();
+		session.Reflections.ShouldNotBeNull();
+		session.Reflections.Wins.ShouldBe("backfilled");
+	}
+
+	private async Task SeedReflectionAsync(string date, string wins)
+	{
+		var payload = new
+		{
+			ClockedInAt = (DateTime?)null,
+			ClockedOutAt = (DateTime?)null,
+			Reflections = new { Wins = wins, Whines = (string?)null, ValueAdds = (string?)null }
+		};
+		var response = await _client.PutAsJsonAsync($"/api/work-sessions?date={date}", payload);
+		response.EnsureSuccessStatusCode();
+	}
 }
