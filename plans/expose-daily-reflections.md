@@ -77,9 +77,9 @@ Status: Complete
 Added `getYesterday` to `week.ts` (literal calendar yesterday; 4 tests incl. month boundary + Monday→Sunday). Extended `workSession.ts` store with a `sessionsByDate` cache and `fetchWeekSessions`/`fetchSession`/`hasReflection`/`saveReflectionsForDate` (all exposed), leaving `today` + existing actions untouched. `saveReflectionsForDate` echoes the cached (or freshly fetched) session's timestamps into the PUT and syncs the `today` ref when the date is today. Note: the store spec mocks `@/api/client` directly (not axios) — used that existing pattern. **Result: 61/61 frontend unit tests pass, lint clean.**
 
 ## Phase 3: Frontend — ReflectionModal component
-Status: Not started
+Status: Complete
 
-- [ ] Create `web/src/components/ReflectionModal.vue` — ONE component, two modes:
+- [x] Create `web/src/components/ReflectionModal.vue` — ONE component, two modes:
   - Props (destructured per vue.md): `isOpen: boolean`, `date: string`, `mode?: 'view' | 'edit'` (default `'view'`, inline union — not in types/index.ts). Emits `close: []`.
   - Frame mirrors `StandupPlanningModal.vue`: `Teleport to="body"`, `v-if="isOpen"`, overlay `fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm`, panel `bg-card border-4 border-double border-primary flex flex-col w-[640px] max-w-[90vw] max-h-[80vh]`; title bar `border-b-4 border-double border-primary`: `// DAILY REFLECTION` (`text-primary font-bold tracking-wider`) + ` · {date}` in `text-muted-foreground`; action bar `border-t-4 border-double border-primary` with the `[S]`/`[E]` keyboard-key button pattern.
   - On open (`watch(() => isOpen, ..., { immediate: true })`): `store.fetchSession(date)` then seed draft from `session?.reflections` (map nulls → `''`, like `existingReflections` in `ClockCeremonyModal.vue:70-74`).
@@ -87,13 +87,13 @@ Status: Not started
   - **Edit mode**: embed `<DailyReflection :initial="..." @update:reflections="draft = $event" />` (remounts fresh per open via `v-if`). Action bar: `[S]ave` (saving/saved states per StandupPlanningModal) + `[E]xit`. Save → `store.saveReflectionsForDate(date, draft)`, flash saved ~1.2s, then emit close. Error → `ERR: {message}` in `text-destructive`.
   - Keyboard: window keydown in `onMounted`/`onUnmounted`, guard `if (!isOpen) return`; `Escape` always closes; `e` closes and `s` saves (edit mode) only when target isn't INPUT/TEXTAREA/contenteditable (guard pattern from `StandupPlanningModal.vue:182-209`).
   - `data-testid`: `reflection-modal-overlay`, `reflection-modal-title`, `reflection-view-wins|whines|value-adds`, `reflection-no-entry`, `cmd-save`, `cmd-exit`.
-- [ ] New `web/src/components/ReflectionModal.spec.ts` (mirror Teleport handling from existing modal specs): renders answers in view mode; `<no entry>` placeholder for null field; fetches session for date on open; emits close on Escape and on `e`; embeds + prefills DailyReflection in edit mode; PUT echoes timestamps on save; ignores `s` while typing in textarea; hides save action in view mode
+- [x] New `web/src/components/ReflectionModal.spec.ts` (mirror Teleport handling from existing modal specs): renders answers in view mode; `<no entry>` placeholder for null field; fetches session for date on open; emits close on Escape and on `e`; embeds + prefills DailyReflection in edit mode; PUT echoes timestamps on save; ignores `s` while typing in textarea; hides save action in view mode
 
 ### Verification Plan
 - `cd web && npx vitest run src/components/ReflectionModal.spec.ts` → pass; `npm run lint` → clean
 
 ### Phase Summary
-_(write when phase completes)_
+Created `ReflectionModal.vue` — one component, `mode: 'view' | 'edit'` prop. Mirrors StandupPlanningModal's frame (Teleport, `border-4 border-double border-primary`, `[S]`/`[E]` keyboard-key buttons, window keydown with typing guard). Title `// DAILY REFLECTION · <date>`. On open it `fetchSession(date)` and gates the body behind a `loading` ref so the embedded `DailyReflection` (reads `initial` once) seeds from real data. View mode shows the three answers with `<no entry>` italic placeholders for null fields; edit mode embeds `DailyReflection` and saves via `saveReflectionsForDate`, flashing `aved!` for 1.2s then emitting close. **Result: 10/10 spec tests pass, lint clean.** Sizing note: `w-[640px] max-w-[90vw] max-h-[80vh]` (content-sized, not the 80vw×80vh standup frame).
 
 ## Phase 4: Frontend — wire into the three views
 Status: Not started
