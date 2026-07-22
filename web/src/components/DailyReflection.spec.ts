@@ -51,4 +51,21 @@ describe('DailyReflection', () => {
     const emitted = wrapper.emitted('update:reflections')!
     expect(emitted[emitted.length - 1]).toEqual([{ wins: 'W', whines: 'X', valueAdds: 'Y' }])
   })
+
+  it('DailyReflection_AppliesStartingHeights_WhenHeightPropsProvided', () => {
+    const wrapper = mount(DailyReflection, {
+      props: { winsHeight: '150px', whinesHeight: '250px', valueAddsHeight: '150px' },
+    })
+
+    expect(wrapper.get('[data-testid="reflect-wins"]').attributes('style')).toContain('height: 150px')
+    expect(wrapper.get('[data-testid="reflect-whines"]').attributes('style')).toContain('height: 250px')
+    expect(wrapper.get('[data-testid="reflect-value-adds"]').attributes('style')).toContain('height: 150px')
+  })
+
+  it('DailyReflection_OmitsInlineHeight_WhenNoHeightProps', () => {
+    const wrapper = mount(DailyReflection)
+
+    // Ceremony usage keeps the default rows="2" sizing — no inline height
+    expect(wrapper.get('[data-testid="reflect-wins"]').attributes('style')).toBeUndefined()
+  })
 })

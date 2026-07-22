@@ -116,6 +116,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
           <DailyReflection
             v-else-if="mode === 'edit'"
             :initial="initialReflections"
+            wins-height="150px"
+            whines-height="250px"
+            value-adds-height="150px"
             @update:reflections="draft = $event"
           />
 
