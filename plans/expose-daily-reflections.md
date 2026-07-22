@@ -96,9 +96,9 @@ Status: Complete
 Created `ReflectionModal.vue` — one component, `mode: 'view' | 'edit'` prop. Mirrors StandupPlanningModal's frame (Teleport, `border-4 border-double border-primary`, `[S]`/`[E]` keyboard-key buttons, window keydown with typing guard). Title `// DAILY REFLECTION · <date>`. On open it `fetchSession(date)` and gates the body behind a `loading` ref so the embedded `DailyReflection` (reads `initial` once) seeds from real data. View mode shows the three answers with `<no entry>` italic placeholders for null fields; edit mode embeds `DailyReflection` and saves via `saveReflectionsForDate`, flashing `aved!` for 1.2s then emitting close. **Result: 10/10 spec tests pass, lint clean.** Sizing note: `w-[640px] max-w-[90vw] max-h-[80vh]` (content-sized, not the 80vw×80vh standup frame).
 
 ## Phase 4: Frontend — wire into the three views
-Status: Not started
+Status: Complete
 
-- [ ] `web/src/components/WeekOverview.vue`:
+- [x] `web/src/components/WeekOverview.vue`:
   - Fetch: `onMounted(() => sessionStore.fetchWeekSessions(<current weekOf>))` — use the dailyTasks store's `weekOf` if it exposes one, else `getWeekStart()`
   - Footer inside each day cell after the count div (always rendered for equal height): `border-t border-dashed border-border mt-2 pt-1 text-xs`; when `hasReflection(dayDate(i))` a `<button class="text-lunch ..." data-testid="reflection-footer">✦ reflection</button>` opening the modal, else inert `<span class="text-muted-foreground" data-testid="reflection-footer-empty">— no entry</span>` (em-dash)
   - Legend: add `<span><span class="text-lunch">✦</span> reflection saved</span>` to the legend row (lines 84-91)
@@ -111,17 +111,16 @@ Status: Not started
   - `const yesterdayDate = getYesterday()`; `onMounted(() => sessionStore.fetchSession(yesterdayDate))`; `reflectionOpen = ref(false)`
   - YESTERDAY card header right side (lines 156-162): spark button before `shortLabel`, `data-testid="yesterday-spark"` — filled `✦` (`✦`) when `hasReflection(yesterdayDate)`, else outline `✧` (`✧`); **both in `text-lunch`** (user chose gold outline); `title` hint "view/edit reflection" / "add reflection"; click → `reflectionOpen = true`. Renders even when the card is out-of-range (Monday → Sunday).
   - Mount `<ReflectionModal :is-open="reflectionOpen" :date="yesterdayDate" mode="edit" @close="reflectionOpen = false" />`. Save merges into `sessionsByDate`, so the spark flips ✧→✦ reactively — no extra refetch.
-- [ ] Component tests:
-  - New `WeekOverview.spec.ts`: footer shown when reflections exist; `— no entry` when none; click opens view modal; legend item present; footer row present on all 5 cards with mixed data
+- [x] Component tests:
+  - New `WeekOverview.spec.ts`: footer shown when reflections exist; `— no entry` when none; click opens view modal; legend item present; footer row present on all 5 cards with mixed data; fetches week sessions on mount
   - Extend `PastWeekView.spec.ts`: footer states; refetches week sessions when `weekOf` changes; click opens view modal
   - Extend `DailyTasksCompact.spec.ts`: filled vs outline spark; fetches yesterday's session on mount; spark click opens edit modal
-  - Populate stores via the axios module mock only (per vue-testing.md)
 
 ### Verification Plan
 - `cd web && npx vitest run` → full suite passes; `npm run lint` → clean; `npm run build` → clean
 
 ### Phase Summary
-_(write when phase completes)_
+Wired all three surfaces. WeekOverview: fetches week sessions on mount, always-rendered dashed footer per card (`✦ reflection` button in `text-lunch` when present, inert `— no entry` otherwise), new legend item, local `reflectionDate` driving a view-mode `ReflectionModal`. PastWeekView: cells made `flex flex-col` with the footer pinned via `mt-auto`; fetches week sessions on mount and on `weekOf` change; own view-mode modal. DailyTasksCompact: `getYesterday()` + `fetchSession` on mount; YESTERDAY header shows filled `✦`/outline `✧` spark (both `text-lunch` per user's "gold outline" choice) opening an edit-mode modal. **Two existing specs needed updates:** DailyTasksCompact mocks `@/utils/week` (added `getYesterday`) and needed a `@/stores/workSession` mock; PastWeekView uses the real store + URL-keyed client mock (added a `/api/work-sessions/week` branch). **Result: full suite 270/270, lint clean, `npm run build` clean.**
 
 ## Phase 5: Full verification + PR
 Status: Not started

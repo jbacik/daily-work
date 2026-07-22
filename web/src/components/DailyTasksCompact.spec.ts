@@ -27,6 +27,22 @@ vi.mock('@/utils/week', () => ({
     ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][new Date(`${date}T00:00:00`).getDay()],
   isCarriedThrough: (originalDate: string, date: string, columnDate: string) =>
     originalDate <= columnDate && columnDate < date,
+  getYesterday: () => YESTERDAY_DATE,
+}))
+
+// Work-session store mock — the yesterday spark reads hasReflection and opens
+// the edit modal; reset return value per test.
+const mockHasReflection = vi.fn(() => false)
+const mockFetchSession = vi.fn()
+const mockSaveReflectionsForDate = vi.fn()
+
+vi.mock('@/stores/workSession', () => ({
+  useWorkSessionStore: () => ({
+    sessionsByDate: {},
+    hasReflection: mockHasReflection,
+    fetchSession: mockFetchSession,
+    saveReflectionsForDate: mockSaveReflectionsForDate,
+  }),
 }))
 
 // Make debounce immediate so auto-save fires synchronously in tests
@@ -103,6 +119,10 @@ describe('DailyTasksCompact', () => {
     mockRemove.mockReset()
     mockMoveUp.mockReset()
     mockMoveDown.mockReset()
+    mockHasReflection.mockReturnValue(false)
+    mockFetchSession.mockReset()
+    mockSaveReflectionsForDate.mockReset()
+    document.body.innerHTML = ''
   })
 
   it('DailyTasksCompact_RendersAsymmetricGrid_WithTodayWider', () => {
@@ -515,5 +535,37 @@ describe('DailyTasksCompact', () => {
     expect(wrapper.findAll('[data-testid="carry-badge"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="ghost-row"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="task-title"]')).toHaveLength(1)
+  })
+
+  it('DailyTasksCompact_ShowsFilledSpark_WhenYesterdayHasReflection', () => {
+    mockHasReflection.mockReturnValue(true)
+
+    const wrapper = mountComponent()
+
+    expect(wrapper.get('[data-testid="yesterday-spark"]').text()).toBe('✦')
+  })
+
+  it('DailyTasksCompact_ShowsOutlineSpark_WhenYesterdayHasNoReflection', () => {
+    mockHasReflection.mockReturnValue(false)
+
+    const wrapper = mountComponent()
+
+    expect(wrapper.get('[data-testid="yesterday-spark"]').text()).toBe('✧')
+  })
+
+  it('DailyTasksCompact_FetchesYesterdaySession_WhenMounted', () => {
+    mountComponent()
+
+    expect(mockFetchSession).toHaveBeenCalledWith(YESTERDAY_DATE)
+  })
+
+  it('DailyTasksCompact_OpensEditModal_WhenSparkClicked', async () => {
+    const wrapper = mountComponent()
+
+    await wrapper.get('[data-testid="yesterday-spark"]').trigger('click')
+    await nextTick()
+
+    expect(document.body.querySelector('[data-testid="reflection-modal-overlay"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-testid="cmd-save"]')).not.toBeNull()
   })
 })

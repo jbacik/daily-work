@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
-import { DAYS, getCarriedDays, getDayLabel } from '@/utils/week'
+import { useWorkSessionStore } from '@/stores/workSession'
+import { DAYS, getCarriedDays, getDayLabel, getYesterday } from '@/utils/week'
+import ReflectionModal from '@/components/ReflectionModal.vue'
 import type { WorkItem } from '@/types'
 
 const store = useDailyTasksStore()
+const sessionStore = useWorkSessionStore()
+
+const yesterdayDate = getYesterday()
+const reflectionOpen = ref(false)
+
+onMounted(() => sessionStore.fetchSession(yesterdayDate))
 
 const newTask = ref('')
 const addingForDay = ref<number | null>(null)
@@ -159,7 +167,18 @@ function cancelEdit() {
             <span class="font-medium">{{ label }}</span>
             <span v-if="label === 'TODAY'" class="animate-pulse">*</span>
           </span>
-          <span v-if="shortLabel" class="text-accent">{{ shortLabel }}</span>
+          <span class="flex items-center gap-1.5">
+            <button
+              v-if="label === 'YESTERDAY'"
+              class="text-lunch hover:text-accent transition-colors"
+              :title="sessionStore.hasReflection(yesterdayDate) ? 'view/edit reflection' : 'add reflection'"
+              data-testid="yesterday-spark"
+              @click="reflectionOpen = true"
+            >
+              {{ sessionStore.hasReflection(yesterdayDate) ? '✦' : '✧' }}
+            </button>
+            <span v-if="shortLabel" class="text-accent">{{ shortLabel }}</span>
+          </span>
         </div>
 
         <div v-if="isOutOfRange(index)" class="text-muted-foreground/50 text-xs italic">
@@ -304,5 +323,12 @@ function cancelEdit() {
         </div>
       </div>
     </div>
+
+    <ReflectionModal
+      :is-open="reflectionOpen"
+      :date="yesterdayDate"
+      mode="edit"
+      @close="reflectionOpen = false"
+    />
   </div>
 </template>

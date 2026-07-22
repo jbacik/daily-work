@@ -167,4 +167,62 @@ describe('PastWeekView', () => {
 
     wrapper.unmount()
   })
+
+  function mockWithWeekSessions(sessions: unknown[]) {
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/api/work-items') return Promise.resolve([])
+      if (url === '/api/read-watch') return Promise.resolve([])
+      if (url === '/api/standup') return Promise.reject(new Error('404'))
+      if (url === '/api/work-sessions/week') return Promise.resolve(sessions)
+      if (url === '/api/work-sessions') return Promise.resolve(sessions[0] ?? '')
+      return Promise.resolve([])
+    })
+  }
+
+  it('PastWeekView_ShowsReflectionFooter_WhenSessionHasReflections', async () => {
+    // Monday (index 0 → 2026-04-06) has a reflection
+    mockWithWeekSessions([
+      { id: 1, date: '2026-04-06', clockedInAt: null, clockedOutAt: null, createdAt: '', reflections: { wins: 'Win', whines: null, valueAdds: null } },
+    ])
+
+    const wrapper = await mountView()
+
+    expect(wrapper.findAll('[data-testid="reflection-footer"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="reflection-footer-empty"]')).toHaveLength(4)
+  })
+
+  it('PastWeekView_ShowsNoEntry_WhenDateHasNoSession', async () => {
+    mockWithWeekSessions([])
+
+    const wrapper = await mountView()
+
+    expect(wrapper.findAll('[data-testid="reflection-footer-empty"]')).toHaveLength(5)
+    expect(wrapper.findAll('[data-testid="reflection-footer"]')).toHaveLength(0)
+  })
+
+  it('PastWeekView_FetchesWeekSessions_WhenWeekOfChanges', async () => {
+    mockWithWeekSessions([])
+    const wrapper = await mountView()
+
+    await wrapper.setProps({ weekOf: '2026-03-30' })
+    await nextTick()
+
+    expect(mockGet).toHaveBeenCalledWith('/api/work-sessions/week', { params: { weekOf: '2026-03-30' } })
+  })
+
+  it('PastWeekView_OpensViewModal_WhenReflectionFooterClicked', async () => {
+    mockWithWeekSessions([
+      { id: 1, date: '2026-04-06', clockedInAt: null, clockedOutAt: null, createdAt: '', reflections: { wins: 'Win', whines: null, valueAdds: null } },
+    ])
+    const wrapper = await mountView()
+
+    await wrapper.findAll('[data-testid="reflection-footer"]')[0]!.trigger('click')
+    await nextTick()
+
+    expect(document.body.querySelector('[data-testid="reflection-modal-overlay"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-testid="cmd-save"]')).toBeNull()
+
+    wrapper.unmount()
+    document.body.innerHTML = ''
+  })
 })

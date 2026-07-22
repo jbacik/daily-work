@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { usePastWeekStore } from '@/stores/pastWeek'
+import { useWorkSessionStore } from '@/stores/workSession'
 import { DAYS, getDateForDayIndex, formatWeekRange } from '@/utils/week'
 import StatsPanel from '@/components/StatsPanel.vue'
+import ReflectionModal from '@/components/ReflectionModal.vue'
 import type { WorkItem } from '@/types'
 
 const { weekOf } = defineProps<{ weekOf: string }>()
 
 const store = usePastWeekStore()
+const sessionStore = useWorkSessionStore()
+
+const reflectionDate = ref<string | null>(null)
 
 const bigThing = computed<WorkItem | null>(
   () => store.workItems.find((i) => i.category === 'BigThing') ?? null
@@ -22,8 +27,14 @@ function getTasksForDay(dayIndex: number): WorkItem[] {
 
 const consumedLearningsCount = computed(() => store.consumedLearnings.length)
 
-onMounted(() => store.load(weekOf))
-watch(() => weekOf, (w) => store.load(w))
+onMounted(() => {
+  store.load(weekOf)
+  sessionStore.fetchWeekSessions(weekOf)
+})
+watch(() => weekOf, (w) => {
+  store.load(w)
+  sessionStore.fetchWeekSessions(w)
+})
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key !== 'G') return
@@ -70,7 +81,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
           <div
             v-for="(day, dayIndex) in DAYS"
             :key="day"
-            class="border border-border/50 bg-muted/30 p-3 min-h-[140px]"
+            class="border border-border/50 bg-muted/30 p-3 min-h-[140px] flex flex-col"
           >
             <div class="text-xs mb-2 text-muted-foreground">{{ day }}</div>
             <div class="space-y-1">
@@ -105,6 +116,24 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
               >
                 &lt;empty&gt;
               </div>
+            </div>
+
+            <div class="mt-auto pt-1 border-t border-dashed border-border text-xs">
+              <button
+                v-if="sessionStore.hasReflection(getDateForDayIndex(dayIndex, weekOf))"
+                class="text-lunch hover:text-accent transition-colors"
+                data-testid="reflection-footer"
+                @click="reflectionDate = getDateForDayIndex(dayIndex, weekOf)"
+              >
+                &#10022; reflection
+              </button>
+              <span
+                v-else
+                class="text-muted-foreground"
+                data-testid="reflection-footer-empty"
+              >
+                &mdash; no entry
+              </span>
             </div>
           </div>
         </div>
@@ -194,5 +223,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </div>
       <div v-if="store.error" class="text-destructive text-xs mt-2">{{ store.error }}</div>
     </div>
+
+    <ReflectionModal
+      :is-open="reflectionDate !== null"
+      :date="reflectionDate ?? ''"
+      mode="view"
+      @close="reflectionDate = null"
+    />
   </div>
 </template>
