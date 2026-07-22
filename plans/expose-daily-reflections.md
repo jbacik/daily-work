@@ -56,10 +56,10 @@ Status: Complete
 Added `GET /api/work-sessions/week?weekOf=<Monday>` returning `List<WorkSession>` for the 5-day range `weekOf..weekOf+4` (AsNoTracking, date-ordered, always 200 with a possibly-empty array). Added 6 tests seeding via HTTP PUT (added a private `SeedReflectionAsync` helper). Used date-anchored constants (weekOf 2026-06-08) — day-of-week is irrelevant since the endpoint filters purely by date range. Named the pin test `PutPunch_*` (not `PutSession_*`) to match the file's route-prefix convention; an existing `PutPunch_PersistsReflectionsWithoutClockOut_WhenClockedOutAtNull` covers clock-in-but-no-out, so the new one is distinct (both timestamps null). **Result: 28/28 pass, `dotnet format --verify-no-changes` clean on both projects.**
 
 ## Phase 2: Frontend — util + store
-Status: Not started
+Status: Complete
 
-- [ ] `web/src/utils/week.ts`: add `getYesterday(today: string = getToday()): string` — literal calendar yesterday via `parseLocalDate`/`toLocalDateString` (comment: distinct from `getPreviousWorkday`, weekends included)
-- [ ] `web/src/stores/workSession.ts` — keep `today` + existing actions untouched; add:
+- [x] `web/src/utils/week.ts`: add `getYesterday(today: string = getToday()): string` — literal calendar yesterday via `parseLocalDate`/`toLocalDateString` (comment: distinct from `getPreviousWorkday`, weekends included)
+- [x] `web/src/stores/workSession.ts` — keep `today` + existing actions untouched; add:
   - `sessionsByDate = ref<Record<string, WorkSession>>({})`
   - `fetchWeekSessions(weekOf: string)` → `GET /api/work-sessions/week` `{ params: { weekOf } }`, merge each session under its `date` key (catch → leave map as-is)
   - `fetchSession(date: string)` → single-date GET; store in map when found (204/empty → delete key, return null)
@@ -67,14 +67,14 @@ Status: Not started
   - `saveReflectionsForDate(date, reflections: ReflectionsInput)` → resolve existing session (map, else `fetchSession`), PUT echoing `clockedInAt`/`clockedOutAt` (nulls when no session), merge response into map; if `date === getToday()` also sync `today` ref
   - Remember the `client.get(...) as any` interceptor pattern — no `.data`
 - [ ] Extend `web/src/utils/week.spec.ts`: `GetYesterday_ReturnsPreviousDay_WhenMidWeek`, `GetYesterday_ReturnsSunday_WhenMondayGiven`, `GetYesterday_CrossesMonthBoundary_WhenFirstOfMonth`
-- [ ] Extend `web/src/stores/workSession.spec.ts` (axios module mock): populate map on fetchWeek success; map unchanged on failure; fetchSession stores/clears; `hasReflection` false when reflections null; save echoes cached timestamps (assert PUT payload); save sends null timestamps when no session; save merges response into map; save syncs `today` when date is today
+- [x] Extend `web/src/stores/workSession.spec.ts` (client module mock): populate map on fetchWeek success; map unchanged on failure; fetchSession stores/clears; `hasReflection` false when reflections null; save echoes cached timestamps (assert PUT payload); save sends null timestamps when no session; save merges response into map; save syncs `today` when date is today
 
 ### Verification Plan
 - `cd web && npx vitest run src/utils/week.spec.ts src/stores/workSession.spec.ts` → pass
 - `cd web && npm run lint` → clean
 
 ### Phase Summary
-_(write when phase completes)_
+Added `getYesterday` to `week.ts` (literal calendar yesterday; 4 tests incl. month boundary + Monday→Sunday). Extended `workSession.ts` store with a `sessionsByDate` cache and `fetchWeekSessions`/`fetchSession`/`hasReflection`/`saveReflectionsForDate` (all exposed), leaving `today` + existing actions untouched. `saveReflectionsForDate` echoes the cached (or freshly fetched) session's timestamps into the PUT and syncs the `today` ref when the date is today. Note: the store spec mocks `@/api/client` directly (not axios) — used that existing pattern. **Result: 61/61 frontend unit tests pass, lint clean.**
 
 ## Phase 3: Frontend — ReflectionModal component
 Status: Not started
