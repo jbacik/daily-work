@@ -123,21 +123,29 @@ Status: Complete
 Wired all three surfaces. WeekOverview: fetches week sessions on mount, always-rendered dashed footer per card (`✦ reflection` button in `text-lunch` when present, inert `— no entry` otherwise), new legend item, local `reflectionDate` driving a view-mode `ReflectionModal`. PastWeekView: cells made `flex flex-col` with the footer pinned via `mt-auto`; fetches week sessions on mount and on `weekOf` change; own view-mode modal. DailyTasksCompact: `getYesterday()` + `fetchSession` on mount; YESTERDAY header shows filled `✦`/outline `✧` spark (both `text-lunch` per user's "gold outline" choice) opening an edit-mode modal. **Two existing specs needed updates:** DailyTasksCompact mocks `@/utils/week` (added `getYesterday`) and needed a `@/stores/workSession` mock; PastWeekView uses the real store + URL-keyed client mock (added a `/api/work-sessions/week` branch). **Result: full suite 270/270, lint clean, `npm run build` clean.**
 
 ## Phase 5: Full verification + PR
-Status: Not started
+Status: Complete (automated) — manual Aspire UI check pending user
 
-- [ ] `dotnet test api/tests` (full suite) and `cd web && npm run test` — both green
-- [ ] `dotnet format api/src` + `dotnet format api/tests`, commit any changes; `npm run lint` clean
-- [ ] Manual test via Aspire (`dotnet run --project aspire/DailyWork.AppHost`): save a reflection via clock-out → `✦ reflection` footer appears on weekly view and opens read-only modal; a past week with reflections shows footers; yesterday spark filled/outline, opens edit modal, save flips outline→filled and updates weekly footer; verify Escape/`e`/`s` keys
-- [ ] Conventional commits per work area (e.g. `feat(api): add week range endpoint for work sessions`, `feat(web): show reflection sparks on weekly and daily views`); PR title `feat: expose daily reflections on weekly and daily views`; do NOT merge
+- [x] `dotnet test api/tests` (full suite, 106/106) and `cd web && npx vitest run` (270/270) — both green
+- [x] `dotnet format api/src` + `dotnet format api/tests` → `--verify-no-changes` clean; `npm run lint` clean; `npm run build` clean
+- [ ] Manual test via Aspire (`dotnet run --project aspire/DailyWork.AppHost`): save a reflection via clock-out → `✦ reflection` footer appears on weekly view and opens read-only modal; a past week with reflections shows footers; yesterday spark filled/outline, opens edit modal, save flips outline→filled and updates weekly footer; verify Escape/`e`/`s` keys — **left to the user as the pre-merge gate (per CLAUDE.md)**
+- [x] Conventional commits per work area; PR to open with title `feat: expose daily reflections on weekly and daily views`; do NOT merge
+- [ ] Open the PR (deferred — no push requested yet)
 
 ### Verification Plan
-- All commands above green; screenshots/manual confirmation of the three surfaces in the running app
+- All commands above green; manual confirmation of the three surfaces in the running app (user)
 
 ### Phase Summary
-_(write when phase completes)_
+All automated verification is green: backend 106/106 (`dotnet test api/tests`), frontend 270/270 (`npx vitest run`), `dotnet format --verify-no-changes` clean on both C# projects, `npm run lint` clean, `npm run build` clean. Committed across four Conventional-Commit commits (api endpoint, store/util, ReflectionModal, view wiring). The manual Aspire UI smoke and the PR open are deferred to the user (CLAUDE.md makes manual verification the human pre-merge gate; no push was requested).
 
 ## Final Recap
-_(write when all phases complete)_
+Saved daily reflections are now visible in three places, all reading from a single date-keyed session cache in the `workSession` store:
+1. **Weekly view** (`WeekOverview.vue`, current week) and **past weeks** (`PastWeekView.vue`) show a dashed footer per day card — `✦ reflection` (gold `lunch` token) when a reflection exists, inert `— no entry` otherwise — plus a new `✦ reflection saved` legend item on the current-week grid. Clicking `✦ reflection` opens a strictly read-only `ReflectionModal`.
+2. **ReflectionModal.vue** (new, one component, view|edit modes) mirrors the app's bespoke double-border modal convention; view mode shows the three answers with `<no entry>` placeholders, edit mode embeds the existing `DailyReflection.vue`.
+3. **Daily view** (`DailyTasksCompact.vue`) shows a filled `✦` / outline `✧` gold spark on the YESTERDAY card (literal calendar yesterday) that opens the modal in edit mode to backfill/update that day's reflection; saving merges the response into the shared cache so the spark and any visible weekly footer update reactively.
+Backend added one endpoint: `GET /api/work-sessions/week?weekOf=<Monday>`. No schema change — the `Reflections` JSON column already existed. Key design point: saving a reflection for an arbitrary date echoes that day's existing clock-in/out timestamps into the PUT (which overwrites them), and works for never-clocked days (null/null timestamps).
 
 ## Deployment Plan
-_(write when all phases complete: local-first app — merge PR after review, `dotnet run --project aspire/DailyWork.AppHost` picks up everything; no schema migration needed — reflections column already exists)_
+Local-first single-user app — no migration or infra change (the reflections column already exists).
+1. Push `feat/expose-daily-reflections` and open a PR titled `feat: expose daily reflections on weekly and daily views`; let Copilot review, triage with `/pr-feedback`.
+2. Run the manual Aspire smoke (see Phase 5) as the pre-merge gate.
+3. After review + approval, merge (never autonomously). Running `dotnet run --project aspire/DailyWork.AppHost` picks up all changes; no additional steps.
