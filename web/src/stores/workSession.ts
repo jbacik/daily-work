@@ -10,7 +10,8 @@ export const useWorkSessionStore = defineStore('workSession', () => {
   // Date-keyed cache of sessions, shared by the weekly grid, past-week view, and
   // the daily-view yesterday spark. Every mutation merges the response back in,
   // so all three surfaces refresh from one source.
-  const sessionsByDate = ref<Record<string, WorkSession>>({})
+  // Keys are deleted when a date has no session, so lookups are genuinely optional.
+  const sessionsByDate = ref<Record<string, WorkSession | undefined>>({})
 
   async function fetchWeekSessions(weekOf: string) {
     try {
@@ -42,7 +43,18 @@ export const useWorkSessionStore = defineStore('workSession', () => {
   // Save reflections for an arbitrary date. The PUT overwrites timestamps, so echo
   // the existing session's (nulls when the day was never clocked) to avoid clobbering.
   async function saveReflectionsForDate(date: string, reflections: ReflectionsInput) {
-    const existing = sessionsByDate.value[date] ?? await fetchSession(date)
+    // Echo the session's existing timestamps (the PUT overwrites them). Use the cache
+    // if present; otherwise fetch inline WITHOUT swallowing errors — a transient GET
+    // failure must abort the save, never fall through to null/null and wipe real clock
+    // times. A genuine empty response (no session) leaves `existing` undefined, and
+    // null/null is then correct: it creates a reflections-only day.
+    let existing = sessionsByDate.value[date]
+    if (!existing) {
+      const data = await client.get('/api/work-sessions', { params: { date } }) as any
+      existing = data && data.id ? data as WorkSession : undefined
+      if (existing) sessionsByDate.value[date] = existing
+    }
+
     const updated = await client.put('/api/work-sessions', {
       clockedInAt: existing?.clockedInAt ?? null,
       clockedOutAt: existing?.clockedOutAt ?? null,

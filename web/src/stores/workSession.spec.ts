@@ -297,6 +297,19 @@ describe('useWorkSessionStore', () => {
     expect(store.sessionsByDate['2026-06-11']).toEqual(updated)
   })
 
+  it('saveReflectionsForDate_AbortsWithoutClobbering_WhenPrefetchFails', async () => {
+    // Arrange — no cached session, and the inline single-date GET fails transiently
+    mockGet.mockRejectedValue(new Error('network'))
+    const store = useWorkSessionStore()
+
+    // Act & Assert — the save must reject rather than PUT null/null and wipe real
+    // clock times for a day that may well have them on the server
+    await expect(
+      store.saveReflectionsForDate('2026-06-12', { wins: 'x', whines: '', valueAdds: '' }),
+    ).rejects.toThrow('network')
+    expect(mockPut).not.toHaveBeenCalled()
+  })
+
   it('saveReflectionsForDate_SyncsTodayRef_WhenDateIsToday', async () => {
     // Arrange
     const todayStr = getToday()
