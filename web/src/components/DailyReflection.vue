@@ -2,8 +2,13 @@
 import { ref, watch } from 'vue'
 import type { ReflectionsInput } from '@/types'
 
-const { initial = null } = defineProps<{
+// Optional starting heights per field. Empty string keeps the default rows="2"
+// sizing (used by the clock-out ceremony); the edit modal passes explicit heights.
+const { initial = null, winsHeight = '', whinesHeight = '', valueAddsHeight = '' } = defineProps<{
   initial?: ReflectionsInput | null
+  winsHeight?: string
+  whinesHeight?: string
+  valueAddsHeight?: string
 }>()
 
 const emit = defineEmits<{
@@ -44,6 +49,7 @@ watch([wins, whines, valueAdds], () => {
         id="reflect-wins"
         v-model="wins"
         rows="2"
+        :style="winsHeight ? { height: winsHeight } : undefined"
         placeholder="What landed today?"
         class="font-mono text-sm bg-input border border-border px-3 py-2 text-foreground resize-y outline-none focus:border-primary placeholder:italic placeholder:text-muted-foreground"
         data-testid="reflect-wins"
@@ -59,6 +65,7 @@ watch([wins, whines, valueAdds], () => {
         id="reflect-whines"
         v-model="whines"
         rows="2"
+        :style="whinesHeight ? { height: whinesHeight } : undefined"
         placeholder="What blocked or frustrated you?"
         class="font-mono text-sm bg-input border border-border px-3 py-2 text-foreground resize-y outline-none focus:border-primary placeholder:italic placeholder:text-muted-foreground"
         data-testid="reflect-whines"
@@ -74,6 +81,7 @@ watch([wins, whines, valueAdds], () => {
         id="reflect-value-adds"
         v-model="valueAdds"
         rows="2"
+        :style="valueAddsHeight ? { height: valueAddsHeight } : undefined"
         placeholder="Anything extra worth flagging for the recap?"
         class="font-mono text-sm bg-input border border-border px-3 py-2 text-foreground resize-y outline-none focus:border-primary placeholder:italic placeholder:text-muted-foreground"
         data-testid="reflect-value-adds"

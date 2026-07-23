@@ -1,4 +1,4 @@
-import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange, getPreviousWorkday } from './week'
+import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange, getPreviousWorkday, getYesterday } from './week'
 
 describe('week utils', () => {
   describe('DAYS', () => {
@@ -210,6 +210,26 @@ describe('week utils', () => {
       vi.setSystemTime(new Date('2026-04-09T12:00:00Z')) // Thursday
 
       expect(getPreviousWorkday()).toBe('2026-04-08')
+    })
+  })
+
+  describe('getYesterday', () => {
+    it('getYesterday_ReturnsPreviousDay_WhenMidWeek', () => {
+      expect(getYesterday('2026-04-08')).toBe('2026-04-07')
+    })
+
+    it('getYesterday_ReturnsSunday_WhenMondayGiven', () => {
+      expect(getYesterday('2026-04-06')).toBe('2026-04-05')
+    })
+
+    it('getYesterday_CrossesMonthBoundary_WhenFirstOfMonth', () => {
+      expect(getYesterday('2026-04-01')).toBe('2026-03-31')
+    })
+
+    it('getYesterday_UsesToday_WhenNoArgumentGiven', () => {
+      vi.setSystemTime(new Date('2026-04-09T12:00:00Z')) // Thursday
+
+      expect(getYesterday()).toBe('2026-04-08')
     })
   })
 

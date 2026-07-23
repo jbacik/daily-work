@@ -184,4 +184,146 @@ describe('useWorkSessionStore', () => {
     expect(mockPut).not.toHaveBeenCalled()
     expect(mockPost).toHaveBeenCalledWith('/api/work-sessions/clock-out', null, { params: { date: getToday() } })
   })
+
+  it('fetchWeekSessions_PopulatesSessionsByDate_WhenSucceeds', async () => {
+    // Arrange
+    const mon = { ...sessionFixture, id: 1, date: '2026-06-08' }
+    const wed = { ...sessionFixture, id: 2, date: '2026-06-10' }
+    mockGet.mockResolvedValue([mon, wed])
+    const store = useWorkSessionStore()
+
+    // Act
+    await store.fetchWeekSessions('2026-06-08')
+
+    // Assert
+    expect(mockGet).toHaveBeenCalledWith('/api/work-sessions/week', { params: { weekOf: '2026-06-08' } })
+    expect(store.sessionsByDate['2026-06-08']).toEqual(mon)
+    expect(store.sessionsByDate['2026-06-10']).toEqual(wed)
+  })
+
+  it('fetchWeekSessions_LeavesMapUnchanged_WhenRequestFails', async () => {
+    // Arrange
+    mockGet.mockRejectedValue(new Error('network'))
+    const store = useWorkSessionStore()
+    store.sessionsByDate['2026-06-08'] = { ...sessionFixture, date: '2026-06-08' }
+
+    // Act
+    await store.fetchWeekSessions('2026-06-08')
+
+    // Assert
+    expect(store.sessionsByDate['2026-06-08']).toBeDefined()
+  })
+
+  it('fetchSession_StoresSession_WhenDataReturned', async () => {
+    // Arrange
+    const session = { ...sessionFixture, date: '2026-06-09' }
+    mockGet.mockResolvedValue(session)
+    const store = useWorkSessionStore()
+
+    // Act
+    const result = await store.fetchSession('2026-06-09')
+
+    // Assert
+    expect(result).toEqual(session)
+    expect(store.sessionsByDate['2026-06-09']).toEqual(session)
+  })
+
+  it('fetchSession_ClearsCachedDate_WhenResponseEmpty', async () => {
+    // Arrange — 204 unwraps to '' through the interceptor
+    mockGet.mockResolvedValue('')
+    const store = useWorkSessionStore()
+    store.sessionsByDate['2026-06-09'] = { ...sessionFixture, date: '2026-06-09' }
+
+    // Act
+    const result = await store.fetchSession('2026-06-09')
+
+    // Assert
+    expect(result).toBeNull()
+    expect(store.sessionsByDate['2026-06-09']).toBeUndefined()
+  })
+
+  it('hasReflection_ReturnsFalse_WhenReflectionsNull', async () => {
+    // Arrange
+    const store = useWorkSessionStore()
+    store.sessionsByDate['2026-06-09'] = { ...sessionFixture, date: '2026-06-09', reflections: null }
+    store.sessionsByDate['2026-06-10'] = {
+      ...sessionFixture,
+      date: '2026-06-10',
+      reflections: { wins: 'Shipped', whines: null, valueAdds: null },
+    }
+
+    // Act & Assert
+    expect(store.hasReflection('2026-06-09')).toBe(false)
+    expect(store.hasReflection('2026-06-08')).toBe(false) // no cached session
+    expect(store.hasReflection('2026-06-10')).toBe(true)
+  })
+
+  it('saveReflectionsForDate_EchoesCachedTimestamps_WhenSessionCached', async () => {
+    // Arrange
+    const cached = { ...sessionFixture, date: '2026-06-09', clockedInAt: '2026-06-09T13:00:00Z', clockedOutAt: '2026-06-09T21:00:00Z' }
+    const updated = { ...cached, reflections: { wins: 'Backfilled', whines: null, valueAdds: null } }
+    mockPut.mockResolvedValue(updated)
+    const store = useWorkSessionStore()
+    store.sessionsByDate['2026-06-09'] = cached
+
+    // Act
+    await store.saveReflectionsForDate('2026-06-09', { wins: 'Backfilled', whines: '', valueAdds: '' })
+
+    // Assert
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      { clockedInAt: cached.clockedInAt, clockedOutAt: cached.clockedOutAt, reflections: { wins: 'Backfilled', whines: '', valueAdds: '' } },
+      { params: { date: '2026-06-09' } },
+    )
+    expect(store.sessionsByDate['2026-06-09']).toEqual(updated)
+  })
+
+  it('saveReflectionsForDate_SendsNullTimestamps_WhenNoSessionExists', async () => {
+    // Arrange — no cached session; the single-date GET also returns empty (204)
+    mockGet.mockResolvedValue('')
+    const updated = { ...sessionFixture, date: '2026-06-11', clockedInAt: null, clockedOutAt: null, reflections: { wins: 'New', whines: null, valueAdds: null } }
+    mockPut.mockResolvedValue(updated)
+    const store = useWorkSessionStore()
+
+    // Act
+    await store.saveReflectionsForDate('2026-06-11', { wins: 'New', whines: '', valueAdds: '' })
+
+    // Assert
+    expect(mockPut).toHaveBeenCalledWith(
+      '/api/work-sessions',
+      { clockedInAt: null, clockedOutAt: null, reflections: { wins: 'New', whines: '', valueAdds: '' } },
+      { params: { date: '2026-06-11' } },
+    )
+    expect(store.sessionsByDate['2026-06-11']).toEqual(updated)
+  })
+
+  it('saveReflectionsForDate_AbortsWithoutClobbering_WhenPrefetchFails', async () => {
+    // Arrange — no cached session, and the inline single-date GET fails transiently
+    mockGet.mockRejectedValue(new Error('network'))
+    const store = useWorkSessionStore()
+
+    // Act & Assert — the save must reject rather than PUT null/null and wipe real
+    // clock times for a day that may well have them on the server
+    await expect(
+      store.saveReflectionsForDate('2026-06-12', { wins: 'x', whines: '', valueAdds: '' }),
+    ).rejects.toThrow('network')
+    expect(mockPut).not.toHaveBeenCalled()
+  })
+
+  it('saveReflectionsForDate_SyncsTodayRef_WhenDateIsToday', async () => {
+    // Arrange
+    const todayStr = getToday()
+    const cached = { ...sessionFixture, date: todayStr }
+    const updated = { ...cached, reflections: { wins: 'Today win', whines: null, valueAdds: null } }
+    mockPut.mockResolvedValue(updated)
+    const store = useWorkSessionStore()
+    store.sessionsByDate[todayStr] = cached
+
+    // Act
+    await store.saveReflectionsForDate(todayStr, { wins: 'Today win', whines: '', valueAdds: '' })
+
+    // Assert
+    expect(store.today).toEqual(updated)
+    expect(store.sessionsByDate[todayStr]).toEqual(updated)
+  })
 })

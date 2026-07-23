@@ -36,6 +36,14 @@ export function getDateForDayIndex(dayIndex: number, weekStart?: string): string
   return toLocalDateString(monday)
 }
 
+// Literal calendar yesterday (today minus one day, weekends included) — distinct
+// from getPreviousWorkday, which skips back to the prior weekday.
+export function getYesterday(today: string = getToday()): string {
+  const d = parseLocalDate(today)
+  d.setDate(d.getDate() - 1)
+  return toLocalDateString(d)
+}
+
 export function getPreviousWorkday(today: string = getToday()): string | null {
   const d = parseLocalDate(today)
   const dow = d.getDay()

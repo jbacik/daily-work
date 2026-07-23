@@ -1,8 +1,20 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
-import { DAYS } from '@/utils/week'
+import { useWorkSessionStore } from '@/stores/workSession'
+import { DAYS, getDateForDayIndex } from '@/utils/week'
+import ReflectionModal from '@/components/ReflectionModal.vue'
 
 const store = useDailyTasksStore()
+const sessionStore = useWorkSessionStore()
+
+const reflectionDate = ref<string | null>(null)
+
+function dayDate(i: number): string {
+  return getDateForDayIndex(i, store.weekOf)
+}
+
+onMounted(() => sessionStore.fetchWeekSessions(store.weekOf))
 
 function getStats(day: number) {
   const dayTasks = store.getTasksForDay(day)
@@ -78,6 +90,24 @@ function getStatusClass(i: number): string {
           <div class="text-xs text-muted-foreground">
             {{ getStats(i).total > 0 ? `${getStats(i).completed}/${getStats(i).total}` : '\u2014' }}
           </div>
+
+          <div class="border-t border-dashed border-border mt-2 pt-1 text-xs">
+            <button
+              v-if="sessionStore.hasReflection(dayDate(i))"
+              class="text-lunch hover:text-accent transition-colors"
+              data-testid="reflection-footer"
+              @click="reflectionDate = dayDate(i)"
+            >
+              &#10022; reflection
+            </button>
+            <span
+              v-else
+              class="text-muted-foreground"
+              data-testid="reflection-footer-empty"
+            >
+              &mdash; no entry
+            </span>
+          </div>
         </div>
       </div>
 
@@ -87,8 +117,16 @@ function getStatusClass(i: number): string {
           <span><span class="text-accent">&#9680;</span> partial</span>
           <span><span class="text-muted-foreground">&#9675;</span> pending</span>
           <span><span class="text-muted-foreground/50">&#9472;</span> empty</span>
+          <span><span class="text-lunch">&#10022;</span> reflection saved</span>
         </div>
       </div>
     </div>
+
+    <ReflectionModal
+      :is-open="reflectionDate !== null"
+      :date="reflectionDate ?? ''"
+      mode="view"
+      @close="reflectionDate = null"
+    />
   </div>
 </template>
