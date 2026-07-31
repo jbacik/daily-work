@@ -1,3 +1,4 @@
+using DailyWork.Api;
 using DailyWork.Api.Data;
 using DailyWork.Api.Dtos;
 using DailyWork.Api.Entities;
@@ -35,7 +36,7 @@ internal static class WorkItemEndpoints
 				: WorkItemCategory.SmallThing;
 
 			var date = dto.Date ?? dateTime.UtcToday;
-			var weekOf = ComputeWeekOf(date);
+			var weekOf = WeekOfHelper.FromDate(date);
 
 			var sortOrder = 0;
 			if (category == WorkItemCategory.SmallThing)
@@ -166,7 +167,7 @@ internal static class WorkItemEndpoints
 			}
 
 			item.Date = dto.Date;
-			item.WeekOf = ComputeWeekOf(dto.Date);
+			item.WeekOf = WeekOfHelper.FromDate(dto.Date);
 			item.TimesMoved += 1;
 			await db.SaveChangesAsync();
 			return Results.Ok(item);
@@ -182,11 +183,5 @@ internal static class WorkItemEndpoints
 		});
 
 		return group;
-	}
-
-	private static string ComputeWeekOf(DateOnly date)
-	{
-		int daysToMonday = ((int)date.DayOfWeek - 1 + 7) % 7;
-		return date.AddDays(-daysToMonday).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 	}
 }
