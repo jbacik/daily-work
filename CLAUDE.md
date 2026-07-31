@@ -47,6 +47,10 @@ aspire/           # .NET Aspire AppHost and ServiceDefaults
 
 Significant decisions (hard to reverse, non-obvious, genuine trade-offs) are recorded in `docs/decision-records/` using the ADR format. Use `/create-adr` during or after a planning session to capture them. The template lives at `docs/decision-records/ADR-TEMPLATE.md`.
 
+## External Agent Integration
+
+`docs/work-metrics-agent-contract.md` is the contract a detached Claude CLI reads to write weekly work metrics via `PUT /api/work-metrics/entries`. Read it before changing anything under `/api/work-metrics` — entry titles are part of that integration surface.
+
 ## Coding Conventions
 
 All conventions live in `.claude/rules/`. Read the relevant file before touching that layer:

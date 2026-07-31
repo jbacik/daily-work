@@ -4,6 +4,7 @@ import { useWorkItemsStore } from '@/stores/workItems'
 import { useReadWatchStore } from '@/stores/readWatch'
 import { useDailyTasksStore } from '@/stores/dailyTasks'
 import { useScratchPadStore } from '@/stores/scratchPad'
+import { useWorkMetricsStore } from '@/stores/workMetrics'
 import { DAYS, getWeekStart, formatWeekRange } from '@/utils/week'
 import type { CommandType } from '@/types'
 import BigThing from '@/components/BigThing.vue'
@@ -20,13 +21,17 @@ import StandupPlanningModal from '@/components/StandupPlanningModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
 import PunchModal from '@/components/PunchModal.vue'
 import PastWeekView from '@/components/PastWeekView.vue'
+import MetricsPanel from '@/components/MetricsPanel.vue'
+import MetricDefinitions from '@/components/MetricDefinitions.vue'
+import MetricsHistory from '@/components/MetricsHistory.vue'
 
-type ViewMode = 'daily' | 'weekly'
+type ViewMode = 'daily' | 'weekly' | 'metrics'
 
 const workItems = useWorkItemsStore()
 const readWatch = useReadWatchStore()
 const dailyTasks = useDailyTasksStore()
 const scratchPad = useScratchPadStore()
+const workMetrics = useWorkMetricsStore()
 
 const launchTime = new Date()
 const view = ref<ViewMode>('daily')
@@ -69,7 +74,11 @@ function fetchReadWatch() {
   }
 }
 
-watch(view, () => fetchReadWatch())
+watch(view, () => {
+  fetchReadWatch()
+  // Re-fetching on entry picks up agent writes without polling.
+  if (view.value === 'metrics') workMetrics.fetchAll()
+})
 
 onMounted(() => {
   workItems.fetch()
@@ -119,6 +128,16 @@ onMounted(() => {
                 <span> Day: {{ currentDayLabel }}</span>
                 <span class="ml-auto">│</span>
               </button>
+              <button
+                type="button"
+                class="flex w-full hover:bg-secondary/50 transition-colors"
+                :aria-pressed="view === 'metrics'"
+                @click="view = 'metrics'"
+              >
+                <span class="text-accent w-4">{{ view === 'metrics' ? '~' : ' ' }}</span>
+                <span> Metrics</span>
+                <span class="ml-auto">│</span>
+              </button>
             </template>
             <template v-else>
               <div class="flex items-center">
@@ -141,7 +160,7 @@ onMounted(() => {
         </div>
 
         <div class="text-xs text-muted-foreground border-t border-b border-border py-2">
-          <span class="text-primary">tip:</span> Click Week/Day above to switch views • Tasks auto-save locally • Press / for more actions
+          <span class="text-primary">tip:</span> Click Week/Day/Metrics above to switch views • Tasks auto-save locally • Press / for more actions
         </div>
       </header>
 
@@ -197,6 +216,15 @@ onMounted(() => {
           <ScratchPad />
           <ReadWatchList :default-show-all="true" />
         </div>
+      </main>
+
+      <!-- Metrics View -->
+      <main v-if="!isPastWeek && view === 'metrics'" class="space-y-6 mt-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div class="lg:col-span-2"><MetricsPanel /></div>
+          <div><MetricDefinitions /></div>
+        </div>
+        <MetricsHistory />
       </main>
 
       <!-- Footer -->
