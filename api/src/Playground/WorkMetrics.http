@@ -1,0 +1,147 @@
+@host = http://localhost:5224
+@weekOf = 2026-07-27
+
+### Health — API + Postgres reachable (check this before any agent write)
+GET {{host}}/health
+
+### Liveness — process only; returns 200 even if Postgres is down
+GET {{host}}/alive
+
+### List active definitions
+GET {{host}}/api/work-metrics/definitions
+
+### List all definitions (active + retired) — feeds the definitions card
+GET {{host}}/api/work-metrics/definitions/all
+
+### Create a definition
+POST {{host}}/api/work-metrics/definitions
+Content-Type: application/json
+
+{
+  "title": "Bugs completed this week"
+}
+
+### Create a definition (duplicate title — expects 422)
+POST {{host}}/api/work-metrics/definitions
+Content-Type: application/json
+
+{
+  "title": "Bugs completed this week"
+}
+
+### Create a definition (blank title — expects 400)
+POST {{host}}/api/work-metrics/definitions
+Content-Type: application/json
+
+{
+  "title": "   "
+}
+
+### Retire a definition (stops seeding new weeks)
+PUT {{host}}/api/work-metrics/definitions/1
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### Rename a definition (existing entries keep their snapshotted title)
+PUT {{host}}/api/work-metrics/definitions/1
+Content-Type: application/json
+
+{
+  "title": "Bugs closed this week"
+}
+
+### Delete a definition (entries survive as ad-hoc)
+DELETE {{host}}/api/work-metrics/definitions/1
+
+### Get this week's entries (seeds active definitions when weekOf is the current week)
+GET {{host}}/api/work-metrics/entries?weekOf={{weekOf}}
+
+### Get entries (missing weekOf — expects 400)
+GET {{host}}/api/work-metrics/entries
+
+### Get entries (not a Monday — expects 400)
+GET {{host}}/api/work-metrics/entries?weekOf=2026-07-28
+
+### AGENT CONTRACT — idempotent upsert on (weekOf, title)
+PUT {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Bugs completed this week",
+  "value": "5 — VP-1188, VP-1192, VP-1205, VP-1211, VP-1219"
+}
+
+### AGENT CONTRACT — re-run replaces the value, still one row
+PUT {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Bugs completed this week",
+  "value": "6 — VP-1188, VP-1192, VP-1205, VP-1211, VP-1219, VP-1224"
+}
+
+### AGENT CONTRACT — a run that found nothing; blank collapses to null / <pending>
+PUT {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Bugs completed this week",
+  "value": ""
+}
+
+### AGENT CONTRACT — non-Monday weekOf fails loudly (expects 400)
+PUT {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "2026-07-28",
+  "title": "Bugs completed this week",
+  "value": "should not be written"
+}
+
+### Add an ad-hoc entry in-app
+POST {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Pairing experiment",
+  "value": null
+}
+
+### Add an ad-hoc entry (duplicate title in week — expects 422)
+POST {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Pairing experiment"
+}
+
+### Edit an entry by hand (flips Source back to App)
+PUT {{host}}/api/work-metrics/entries/1
+Content-Type: application/json
+
+{
+  "value": "Tried Claude-in-the-loop for the tz-drift fix.\nNet: ~40 min to 12 min."
+}
+
+### Clear an entry back to <pending>
+PUT {{host}}/api/work-metrics/entries/1
+Content-Type: application/json
+
+{
+  "value": ""
+}
+
+### Delete an entry
+DELETE {{host}}/api/work-metrics/entries/1
+
+### Historical listing — one summary row per week, newest first
+GET {{host}}/api/work-metrics/weeks

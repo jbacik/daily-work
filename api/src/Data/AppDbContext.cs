@@ -11,6 +11,8 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 	public DbSet<UpdateComm> UpdateComms => Set<UpdateComm>();
 	public DbSet<ScratchPad> ScratchPads => Set<ScratchPad>();
 	public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
+	public DbSet<WorkMetricDefinition> WorkMetricDefinitions => Set<WorkMetricDefinition>();
+	public DbSet<WorkMetricEntry> WorkMetricEntries => Set<WorkMetricEntry>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -46,6 +48,23 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 		{
 			e.HasIndex(s => s.Date).IsUnique();
 			e.OwnsOne(s => s.Reflections, b => b.ToJson());
+		});
+
+		modelBuilder.Entity<WorkMetricDefinition>(e =>
+		{
+			e.HasIndex(d => d.Title).IsUnique();
+			e.HasIndex(d => d.IsActive);
+		});
+
+		modelBuilder.Entity<WorkMetricEntry>(e =>
+		{
+			// (WeekOf, Title) is the natural key the external agent upserts on.
+			e.HasIndex(m => new { m.WeekOf, m.Title }).IsUnique();
+			e.HasIndex(m => m.WeekOf);
+			e.HasOne<WorkMetricDefinition>()
+				.WithMany()
+				.HasForeignKey(m => m.DefinitionId)
+				.OnDelete(DeleteBehavior.SetNull);
 		});
 	}
 }

@@ -75,3 +75,28 @@ export interface DailyForecast {
 }
 
 export type ForecastStatus = 'loading' | 'loaded' | 'missing' | 'error'
+
+export interface WorkMetricDefinition {
+  id: number
+  title: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+}
+
+export interface WorkMetricEntry {
+  id: number
+  weekOf: string
+  title: string
+  value: string | null
+  definitionId: number | null
+  source: 'App' | 'Agent'
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface WorkMetricWeekSummary {
+  weekOf: string
+  entryCount: number
+  filledCount: number
+}

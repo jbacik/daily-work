@@ -50,5 +50,6 @@ app.MapScratchPadEndpoints();
 app.MapCalendarEndpoints();
 app.MapWorkSessionEndpoints();
 app.MapForecastEndpoints();
+app.MapWorkMetricEndpoints();
 
 app.Run();
