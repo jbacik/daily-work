@@ -201,7 +201,10 @@ internal static partial class WorkMetricEndpoints
 			}
 
 			// Replace, never append — that is what makes agent re-runs idempotent.
-			entry.Value = dto.Value;
+			// Blank collapses to null so an agent reporting nothing reads as <pending>
+			// rather than a filled-but-empty row. Content is stored verbatim: values
+			// are multi-line, and trimming would eat intentional formatting.
+			entry.Value = NormalizeValue(dto.Value);
 			entry.Source = WorkMetricSource.Agent;
 			entry.UpdatedAt = DateTime.UtcNow;
 			await db.SaveChangesAsync();
@@ -231,7 +234,7 @@ internal static partial class WorkMetricEndpoints
 			{
 				WeekOf = dto.WeekOf,
 				Title = title,
-				Value = dto.Value,
+				Value = NormalizeValue(dto.Value),
 				Source = WorkMetricSource.App,
 			};
 			db.WorkMetricEntries.Add(entry);
@@ -265,7 +268,7 @@ internal static partial class WorkMetricEndpoints
 				entry.Title = title;
 			}
 			if (dto.Value is not null)
-				entry.Value = dto.Value.Length == 0 ? null : dto.Value;
+				entry.Value = NormalizeValue(dto.Value);
 
 			// A hand edit takes ownership of the row back from the agent.
 			entry.Source = WorkMetricSource.App;
@@ -311,6 +314,14 @@ internal static partial class WorkMetricEndpoints
 		});
 
 		return group;
+	}
+
+	// Null, empty, and whitespace-only all mean "nothing recorded" and must collapse to
+	// null — the UI reads only null as <pending>, and GET /weeks counts only non-blank
+	// values as filled. Every write path routes through here so the two agree.
+	private static string? NormalizeValue(string? value)
+	{
+		return string.IsNullOrWhiteSpace(value) ? null : value;
 	}
 
 	private static async Task SeedCurrentWeekAsync(AppDbContext db, string weekOf)

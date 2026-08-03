@@ -72,7 +72,8 @@ Returns `200` with the stored entry on both create and update.
 | **`weekOf` must be a Monday** | `yyyy-MM-dd`, and `DayOfWeek == Monday`. Anything else is a `400` — the API never snaps your date to the nearest Monday, because silently writing to a different week is worse than failing. |
 | **`title` must match exactly** | Trimmed, case-sensitive. `"Bugs completed this week"` and `"Bugs Completed This Week"` are two different entries. Copy titles from `GET /api/work-metrics/definitions`. |
 | **`value` is replaced, not appended** | That is what makes a re-run idempotent. If you want to accumulate, read the entry first and write the combined text. |
-| **`value` is freeform text** | No numeric field. `"7 (VP-1201, VP-1214)"` and a three-line paragraph are both fine. `null` means the entry is pending. |
+| **`value` is freeform text** | No numeric field. `"7 (VP-1201, VP-1214)"` and a three-line paragraph are both fine. Interior formatting — newlines, indentation — is stored verbatim. |
+| **Blank means pending** | `null`, `""`, and whitespace-only all collapse to `null` and render as `<pending>`, and count as *unfilled* in `GET /weeks`. So if your run finds nothing, sending `""` is fine and honest — you do not need to skip the write or invent a `"0"`. |
 | **Writes are marked `Agent`** | `source` is set to `Agent` and `updatedAt` is stamped. The UI renders these with an `[agent]` marker. A hand edit in the app flips `source` back to `App`. |
 | **Definitions are linked by title** | If a definition with the same title exists, the new entry links to it. Otherwise the entry is ad-hoc. Either way the write succeeds. |
 

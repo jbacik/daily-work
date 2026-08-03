@@ -124,6 +124,60 @@ public class WorkMetricEndpointTests : IClassFixture<CustomWebApplicationFactory
 		entries.ShouldBeEmpty();
 	}
 
+	[Theory]
+	[InlineData("")]
+	[InlineData("   ")]
+	[InlineData("\n\t ")]
+	public async Task PutWorkMetricEntryByKey_StoresNullValue_WhenValueIsBlank(string blank)
+	{
+		// Arrange
+		var payload = new { weekOf = CurrentWeekOf, title = "Bugs completed this week", value = blank };
+
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/work-metrics/entries", payload);
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var entry = await response.Content.ReadFromJsonAsync<WorkMetricEntry>(JsonOptions);
+		entry.ShouldNotBeNull();
+		entry.Value.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutWorkMetricEntryByKey_ClearsExistingValue_WhenAgentReportsBlank()
+	{
+		// Arrange — an agent that found something last run and nothing this run
+		await _client.PutAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = CurrentWeekOf, title = "Bugs completed this week", value = "3 — VP-1170" });
+
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = CurrentWeekOf, title = "Bugs completed this week", value = "" });
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var entries = await GetEntriesAsync(CurrentWeekOf);
+		entries.ShouldHaveSingleItem();
+		entries[0].Value.ShouldBeNull();
+	}
+
+	[Fact]
+	public async Task PutWorkMetricEntryByKey_PreservesInteriorWhitespace_WhenValueIsMultiLine()
+	{
+		// Arrange — multi-line values are the norm; trimming must not eat formatting
+		const string value = "7 — VP-1201, VP-1214\n  reviewed: VP-1199\nmerged 5 · 2 in review";
+
+		// Act
+		var response = await _client.PutAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = CurrentWeekOf, title = "PRs involved in this week", value });
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var entry = await response.Content.ReadFromJsonAsync<WorkMetricEntry>(JsonOptions);
+		entry.ShouldNotBeNull();
+		entry.Value.ShouldBe(value);
+	}
+
 	[Fact]
 	public async Task PutWorkMetricEntryByKey_ReturnsBadRequest_WhenTitleBlank()
 	{
@@ -407,8 +461,10 @@ public class WorkMetricEndpointTests : IClassFixture<CustomWebApplicationFactory
 		entry.Source.ShouldBe(WorkMetricSource.App);
 	}
 
-	[Fact]
-	public async Task PutWorkMetricEntry_ClearsValueToPending_WhenValueIsEmpty()
+	[Theory]
+	[InlineData("")]
+	[InlineData("   ")]
+	public async Task PutWorkMetricEntry_ClearsValueToPending_WhenValueIsBlank(string blank)
 	{
 		// Arrange
 		var created = await _client.PostAsJsonAsync("/api/work-metrics/entries",
@@ -417,13 +473,29 @@ public class WorkMetricEndpointTests : IClassFixture<CustomWebApplicationFactory
 		entry.ShouldNotBeNull();
 
 		// Act
-		var response = await _client.PutAsJsonAsync($"/api/work-metrics/entries/{entry.Id}", new { value = "" });
+		var response = await _client.PutAsJsonAsync($"/api/work-metrics/entries/{entry.Id}", new { value = blank });
 
 		// Assert
 		response.EnsureSuccessStatusCode();
 		var updated = await response.Content.ReadFromJsonAsync<WorkMetricEntry>(JsonOptions);
 		updated.ShouldNotBeNull();
 		updated.Value.ShouldBeNull();
+	}
+
+	[Theory]
+	[InlineData("")]
+	[InlineData("   ")]
+	public async Task PostWorkMetricEntry_StoresNullValue_WhenValueIsBlank(string blank)
+	{
+		// Act
+		var response = await _client.PostAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = CurrentWeekOf, title = "Pairing experiment", value = blank });
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.Created);
+		var entry = await response.Content.ReadFromJsonAsync<WorkMetricEntry>(JsonOptions);
+		entry.ShouldNotBeNull();
+		entry.Value.ShouldBeNull();
 	}
 
 	[Fact]
@@ -486,6 +558,27 @@ public class WorkMetricEndpointTests : IClassFixture<CustomWebApplicationFactory
 		weeks[0].FilledCount.ShouldBe(1);
 		weeks[1].WeekOf.ShouldBe(PastWeekOf);
 		weeks[1].FilledCount.ShouldBe(1);
+	}
+
+	[Fact]
+	public async Task GetWorkMetricWeeks_CountsBlankAgentWriteAsUnfilled_WhenAgentReportsNothing()
+	{
+		// Arrange — a whitespace-only agent write used to count as filled
+		await _client.PutAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = PastWeekOf, title = "Bugs completed this week", value = "   " });
+		await _client.PutAsJsonAsync("/api/work-metrics/entries",
+			new { weekOf = PastWeekOf, title = "PRs involved in this week", value = "4 — VP-1133" });
+
+		// Act
+		var response = await _client.GetAsync("/api/work-metrics/weeks");
+
+		// Assert
+		response.EnsureSuccessStatusCode();
+		var weeks = await response.Content.ReadFromJsonAsync<List<WorkMetricWeekSummary>>(JsonOptions);
+		weeks.ShouldNotBeNull();
+		weeks.ShouldHaveSingleItem();
+		weeks[0].EntryCount.ShouldBe(2);
+		weeks[0].FilledCount.ShouldBe(1);
 	}
 
 	private sealed record WorkMetricWeekSummary(string WeekOf, int EntryCount, int FilledCount);

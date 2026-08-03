@@ -85,6 +85,16 @@ Content-Type: application/json
   "value": "6 — VP-1188, VP-1192, VP-1205, VP-1211, VP-1219, VP-1224"
 }
 
+### AGENT CONTRACT — a run that found nothing; blank collapses to null / <pending>
+PUT {{host}}/api/work-metrics/entries
+Content-Type: application/json
+
+{
+  "weekOf": "{{weekOf}}",
+  "title": "Bugs completed this week",
+  "value": ""
+}
+
 ### AGENT CONTRACT — non-Monday weekOf fails loudly (expects 400)
 PUT {{host}}/api/work-metrics/entries
 Content-Type: application/json
