@@ -66,3 +66,20 @@ This makes a `GET` mutate state, which is a deliberate exception to normal HTTP 
 - Deleting a *definition-backed* entry from the current week would be undone by the next
   seed-on-read. The UI therefore hides the delete affordance on those rows (retire the
   definition instead); the API does not block it.
+- **Seeding is idempotent but not concurrency-safe, by choice.** `SeedCurrentWeekAsync` reads
+  the week's existing titles and then inserts the missing ones — a read-then-write with no
+  transaction, no lock, and no upsert. Two overlapping `GET /entries?weekOf=<current>` calls
+  can both observe an unseeded week and both insert, and the unique index on
+  `(WeekOf, Title)` will reject the loser with a `DbUpdateException` surfacing as a 500.
+
+  This is reachable: `fetchAll()` in the web store has no in-flight guard, and `watch(view)`
+  fires on every view change, so toggling in and out of the Metrics view fast enough issues
+  concurrent reads. It is left unhandled because this is a single-user local tool, the failed
+  request is a read the user can simply repeat, and nothing is corrupted — the winning insert
+  is the correct row either way.
+
+  If this ever becomes a real annoyance, the cheap fixes in rough order of preference are:
+  catch `DbUpdateException` around the seed and re-read (treat "someone else seeded it" as
+  success); guard `fetchAll()` against concurrent invocation client-side; or move to a genuine
+  `INSERT ... ON CONFLICT DO NOTHING`. **Do not** reach for a distributed lock or a
+  serializable transaction — that is far more machinery than a single-user tool warrants.

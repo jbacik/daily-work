@@ -324,6 +324,10 @@ internal static partial class WorkMetricEndpoints
 		return string.IsNullOrWhiteSpace(value) ? null : value;
 	}
 
+	// Read-then-write with no transaction: idempotent on repeat calls, but NOT
+	// concurrency-safe. Two overlapping current-week reads can both insert and the
+	// unique (WeekOf, Title) index rejects the loser as a 500. Accepted trade-off for
+	// a single-user tool — see ADR-0002 before "fixing" this.
 	private static async Task SeedCurrentWeekAsync(AppDbContext db, string weekOf)
 	{
 		var activeTitles = await db.WorkMetricDefinitions
