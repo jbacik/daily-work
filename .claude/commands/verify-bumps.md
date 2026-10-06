@@ -28,7 +28,7 @@ From the PR body and diff, extract:
 - **Security changes** — CVE fixes, hardening behavior
 - **Behavioral changes** — things that work differently even without an API break
 
-Cross-reference the diff to confirm what files changed and that the SHA/version matches the claimed tag.
+Independently verify each changed version/SHA against upstream metadata: resolve GitHub Action tag refs (including annotated tags) with `gh api`, and query the NuGet or npm registry for package versions. Do not treat agreement between the PR body and diff as verification.
 
 **For GitHub Actions bumps** (the most common type in this repo): check what triggers, inputs, and permissions `ci.yml` actually uses vs. what changed in the action — most concerns won't apply if the project doesn't use the affected feature.
 
