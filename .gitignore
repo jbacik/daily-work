@@ -22,6 +22,13 @@ dist/
 .env.local
 .env.*.local
 
+# Database backups (see scripts/backup-db.ps1)
+backups/
+
+# Calendar forecast data written by the external agent and read at runtime via
+# CalendarForecasts:Directory — generated data, not source.
+resources/calendar-forecasts/
+
 # Prototypes and Ephemeral Assets
 prototypes/
 /.claude/settings.local.json
