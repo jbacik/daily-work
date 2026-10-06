@@ -43,7 +43,7 @@ Tailor the plan to the type of dependency:
 | npm package | Check how it's used in `web/`; watch for new lint warnings or build failures |
 | Security fix | Note the CVE; confirm the vulnerable code path is used in this project |
 
-For major version bumps always scan the full release notes — not just what Dependabot highlights.
+For major version bumps, follow the upstream changelog or release-note links and inspect every release from the old version (exclusive) through the new version (inclusive). Do not rely only on Dependabot's embedded highlights.
 
 ## Step 5 — Report
 
