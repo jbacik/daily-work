@@ -39,7 +39,7 @@ Tailor the plan to the type of dependency:
 | Type | Primary verification |
 |---|---|
 | CI action (e.g. `actions/checkout`, `actions/setup-dotnet`) | CI passing on this PR; note manual checks if the action touches secrets, artifacts, or permissions |
-| .NET NuGet package | Check how it's used in `api/`; flag any changed API or behavior on a critical path |
+| .NET NuGet package | Locate its SDK/package references and usages across `api/`, `aspire/`, and tests; flag any changed API or behavior on a critical path |
 | npm package | Check how it's used in `web/`; watch for new lint warnings or build failures |
 | Security fix | Note the CVE; confirm the vulnerable code path is used in this project |
 
