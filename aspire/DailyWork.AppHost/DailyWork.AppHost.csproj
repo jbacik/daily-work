@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.3.0" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.0" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,6 +9,14 @@
          the Windows-generated lock file doesn't know about. Disable locked-mode
          enforcement here while keeping the lock file for caching on the same platform. -->
     <RestoreLockedMode>false</RestoreLockedMode>
+    <!-- Aspire 13.5+ can source the dashboard and orchestrator from the Aspire CLI bundle
+         instead of the platform-specific NuGet packages. Staying on the NuGet packages keeps
+         the AppHost buildable without a matching CLI on the machine (and in CI). ASPIRE010 is
+         the SDK nagging about that choice, so suppress it rather than build with a warning.
+         Switching to the bundle would also retire the RID churn noted above — worth doing as
+         its own change, not bundled into a version bump. -->
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

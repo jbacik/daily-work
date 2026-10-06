@@ -8,7 +8,27 @@ Personal productivity tool: daily/weekly task tracking, learning queue, and AI-g
 dotnet run --project aspire/DailyWork.AppHost
 ```
 
-Aspire starts PostgreSQL (Docker), applies EF migrations, launches the API, and starts the Vite dev server. Frontend URL is in the Aspire dashboard (typically `http://localhost:5173`).
+Aspire starts PostgreSQL (Docker), applies EF migrations, launches the API, and starts the Vite dev server. Get the frontend URL from the Aspire dashboard — since Aspire 13.5 the dev-server port is allocated from a high range per run rather than being Vite's default 5173, so don't assume a fixed port.
+
+## Backing Up the Database
+
+The Postgres data lives in the persistent Docker volume `dailywork-postgres-18-data`. Before any risky change (Aspire upgrade, Postgres image bump, destructive migration), take a dump:
+
+```
+./scripts/backup-db.ps1
+```
+
+Writes `backups/dailywork-<timestamp>.dump` (pg_dump custom format, used for restore) and a matching `.sql` for eyeballing. The app must be running so the container exists. `backups/` is gitignored.
+
+To roll back:
+
+```
+./scripts/restore-db.ps1
+```
+
+Defaults to the newest dump; pass `-DumpPath` for a specific one. This **drops and recreates** the database, so it prompts for confirmation (`-Force` skips). Stop the API first, and restart it afterwards.
+
+Because the dump is logical (not a raw volume copy), it restores cleanly into a different Postgres major version — which is what makes it the right safety net for an Aspire or image upgrade.
 
 ## Running Tests
 

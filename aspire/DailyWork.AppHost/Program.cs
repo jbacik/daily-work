@@ -2,8 +2,13 @@ const string dockerProject = "jb_daily-work";
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Pin the image tag explicitly, and BEFORE WithDataVolume — the data directory layout is
+// chosen from the configured tag at the time WithDataVolume runs. Aspire 13.4 moved the
+// default from 17.6 to 18.3, and PG18 stores cluster files under a major-version
+// subdirectory, so an unpinned tag silently breaks the volume on a future major bump.
 var postgres = builder.AddPostgres("postgres")
-	.WithDataVolume("dailywork-postgres-data")
+	.WithImageTag("18.3")
+	.WithDataVolume("dailywork-postgres-18-data")
 	.WithLifetime(ContainerLifetime.Persistent)
 	.WithContainerRuntimeArgs("--label", $"com.docker.compose.project={dockerProject}")
 	.WithPgAdmin(pgAdmin => pgAdmin
