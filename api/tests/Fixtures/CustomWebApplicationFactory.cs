@@ -14,7 +14,9 @@ namespace DailyWork.Api.Tests.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<IApiMarker>, IAsyncLifetime
 {
-	private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16.8-alpine")
+	// Keep this major/minor in step with the image pinned in the AppHost
+	// (aspire/DailyWork.AppHost/Program.cs) so tests exercise the same engine we run.
+	private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:18.3-alpine")
 		.Build();
 
 	private Respawner _respawner = null!;
