@@ -44,6 +44,13 @@ export function getYesterday(today: string = getToday()): string {
   return toLocalDateString(d)
 }
 
+// Shift a yyyy-MM-dd date by a whole number of calendar days (negative goes back).
+export function shiftDate(date: string, days: number): string {
+  const d = parseLocalDate(date)
+  d.setDate(d.getDate() + days)
+  return toLocalDateString(d)
+}
+
 export function getPreviousWorkday(today: string = getToday()): string | null {
   const d = parseLocalDate(today)
   const dow = d.getDay()

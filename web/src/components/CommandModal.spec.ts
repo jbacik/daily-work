@@ -182,6 +182,65 @@ describe('CommandModal', () => {
     wrapper.unmount()
   })
 
+  it('CommandModal_SendsGenerationId_WhenSavingGeneratedDraft', async () => {
+    clientPost.mockResolvedValueOnce({
+      markdown: '### Did you complete your One Thing yesterday?\nCrushed it.',
+      generationId: 7,
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].generationId).toBe(7)
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_OmitsGenerationId_WhenSavingLoadedEntry', async () => {
+    clientGet.mockResolvedValue({ markdown: '### Did you complete?\nYes saved!', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_SavesEditedText_WhenAnswerEditedInPlace', async () => {
+    clientGet.mockResolvedValue({ markdown: '### Did you complete?\nYes saved!', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    const answer = queryBody('[data-section-answer="0"]') as HTMLElement
+    answer.innerHTML = 'Edited by hand'
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].markdown).toBe('### Did you complete?\nEdited by hand')
+
+    wrapper.unmount()
+  })
+
   it('CommandModal_SavesCleanMarkdown_WithoutCopyButtonArtifacts', async () => {
     clientPost.mockResolvedValue({
       markdown: '### Did you complete your One Thing yesterday?\nCrushed it.\n\n### What is your One Thing today?\nInsights work.',

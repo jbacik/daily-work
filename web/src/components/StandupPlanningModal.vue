@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import client from '@/api/client'
 import { getToday } from '@/utils/week'
+import { readEditedSections } from '@/utils/standupMarkdown'
 import { useForecastStore } from '@/stores/forecast'
 import ForecastLoader from '@/components/ForecastLoader.vue'
 import StandupShapePanel from '@/components/StandupShapePanel.vue'
@@ -27,6 +28,8 @@ const error = ref<string | null>(null)
 const sections = ref<{ question: string; answer: string }[]>([])
 const copiedSection = ref<number | null>(null)
 const checkedSaved = ref(false)
+// Id of the draft returned by /generate; sent on save so the draft and the edited text pair up
+const generationId = ref<number | null>(null)
 const dotIndex = ref(0)
 let dotInterval: ReturnType<typeof setInterval> | null = null
 
@@ -41,8 +44,11 @@ function sectionsToMarkdown(): string {
 }
 
 async function handleSave() {
+  if (saveState.value === 'saving') return
+  // Pull in edits made directly in the contenteditable area before serializing
+  sections.value = readEditedSections(contentRef.value, sections.value)
   const markdown = sectionsToMarkdown().trim()
-  if (!markdown || saveState.value === 'saving') return
+  if (!markdown) return
 
   saveState.value = 'saving'
   try {
@@ -50,6 +56,7 @@ async function handleSave() {
       markdown,
       date: getToday(),
       commandType: 'standup',
+      ...(generationId.value !== null && { generationId: generationId.value }),
     })
     saveState.value = 'saved'
     setTimeout(() => { saveState.value = 'idle' }, 3000)
@@ -119,6 +126,7 @@ async function generate() {
   loading.value = true
   error.value = null
   sections.value = []
+  generationId.value = null
   startDotAnimation()
 
   try {
@@ -126,6 +134,7 @@ async function generate() {
     const data = await client.post('/api/standup/generate', null, { params }) as any
     const markdown = data?.markdown ?? ''
     sections.value = parseMarkdown(markdown)
+    generationId.value = data?.generationId ?? null
   } catch (e: any) {
     error.value = e?.response?.data ?? e?.message ?? 'Generation failed'
   } finally {
@@ -296,7 +305,7 @@ onUnmounted(() => {
                   <div class="flex items-start gap-2 group">
                     <div class="flex-1">
                       <div class="text-accent font-bold">{{ section.question }}</div>
-                      <div class="whitespace-pre-wrap mt-1" v-html="renderBold(section.answer)"></div>
+                      <div class="whitespace-pre-wrap mt-1" :data-section-answer="i" v-html="renderBold(section.answer)"></div>
                     </div>
                     <button
                       contenteditable="false"

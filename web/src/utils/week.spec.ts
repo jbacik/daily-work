@@ -1,4 +1,4 @@
-import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange, getPreviousWorkday, getYesterday } from './week'
+import { DAYS, getToday, getWeekStart, getCurrentDayIndex, getDateForDayIndex, getRecentWeekStarts, formatWeekRange, getPreviousWorkday, getYesterday, shiftDate } from './week'
 
 describe('week utils', () => {
   describe('DAYS', () => {
@@ -257,5 +257,15 @@ describe('week utils', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
+  })
+})
+
+describe('shiftDate', () => {
+  it('ShiftDate_CrossesMonthBoundary_WhenShiftingBack', () => {
+    expect(shiftDate('2026-10-07', -14)).toBe('2026-09-23')
+  })
+
+  it('ShiftDate_CrossesYearBoundary_WhenShiftingForward', () => {
+    expect(shiftDate('2026-12-30', 3)).toBe('2027-01-02')
   })
 })

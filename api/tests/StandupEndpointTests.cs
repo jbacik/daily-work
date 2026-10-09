@@ -4,6 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DailyWork.Api.Prompts;
 using DailyWork.Api.Tests.Fixtures;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Shouldly;
@@ -547,4 +550,139 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 		markdown.ShouldContain("New content");
 		markdown.ShouldNotContain("Old content");
 	}
+
+	[Fact]
+	public async Task GenerateStandup_ReturnsGenerationId_WhenCaptureEnabled()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "Draft standup";
+		await SeedWorkItemAsync("Capture item", "2020-01-15");
+
+		// Act
+		var response = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		result.GetProperty("generationId").ValueKind.ShouldBe(JsonValueKind.Number);
+	}
+
+	[Fact]
+	public async Task GetFeedbackPairs_ReturnsDraftAndSubmitted_WhenSaveLinksGeneration()
+	{
+		// Arrange — generate a draft, then save an edited version linked to it
+		_factory.ChatCompletionService.ResponseContent = "Model draft text";
+		await SeedWorkItemAsync("Pair item", "2020-01-15");
+		var generateResponse = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+		var generated = await generateResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		var generationId = generated.GetProperty("generationId").GetInt32();
+
+		await _client.PostAsJsonAsync("/api/standup", new
+		{
+			Markdown = "My edited text",
+			Date = "2020-01-15",
+			GenerationId = generationId,
+		});
+
+		// Act
+		var response = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var pairs = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		pairs.GetArrayLength().ShouldBe(1);
+		var pair = pairs[0];
+		pair.GetProperty("date").GetString().ShouldBe("2020-01-15");
+		pair.GetProperty("promptVariant").GetString().ShouldBe($"midweek-{StandupPrompts.PromptVersion}");
+		pair.GetProperty("generatedMarkdown").GetString().ShouldBe("Model draft text");
+		pair.GetProperty("submittedMarkdown").GetString().ShouldBe("My edited text");
+		pair.GetProperty("userMessage").GetString()!.ShouldContain("Standup context:");
+	}
+
+	[Fact]
+	public async Task GetFeedbackPairs_ExcludesUnlinkedStandups_WhenSavedWithoutGeneration()
+	{
+		// Arrange
+		await _client.PostAsJsonAsync("/api/standup", new { Markdown = "Hand written", Date = "2020-01-15" });
+
+		// Act
+		var response = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var pairs = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		pairs.GetArrayLength().ShouldBe(0);
+	}
+
+	[Fact]
+	public async Task SaveStandup_IgnoresGenerationId_WhenGenerationUnknown()
+	{
+		// Act
+		var response = await _client.PostAsJsonAsync("/api/standup", new
+		{
+			Markdown = "Saved anyway",
+			Date = "2020-01-15",
+			GenerationId = 999999,
+		});
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var pairsResponse = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+		var pairs = await pairsResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		pairs.GetArrayLength().ShouldBe(0);
+	}
+
+	[Fact]
+	public async Task GetFeedbackPairs_Returns400_WhenRangeMissing()
+	{
+		// Act
+		var response = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
+	public async Task GenerateStandup_ReturnsNullGenerationId_WhenCaptureDisabled()
+	{
+		// Arrange
+		_factory.ChatCompletionService.ResponseContent = "Draft standup";
+		await SeedWorkItemAsync("Disabled capture item", "2020-01-15");
+		await using var disabledFactory = CreateCaptureDisabledFactory();
+		var client = disabledFactory.CreateClient();
+
+		// Act
+		var response = await client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		result.GetProperty("markdown").GetString().ShouldBe("Draft standup");
+		result.GetProperty("generationId").ValueKind.ShouldBe(JsonValueKind.Null);
+	}
+
+	[Fact]
+	public async Task GetFeedbackPairs_Returns404_WhenCaptureDisabled()
+	{
+		// Arrange
+		await using var disabledFactory = CreateCaptureDisabledFactory();
+		var client = disabledFactory.CreateClient();
+
+		// Act
+		var response = await client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+	}
+
+	// Per-test override of the feature flag; the shared factory (and its Postgres container) is untouched.
+	private WebApplicationFactory<IApiMarker> CreateCaptureDisabledFactory() =>
+		_factory.WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, config) =>
+			config.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				["Features:StandupFeedbackCapture"] = "false",
+			})));
+
+	private Task<HttpResponseMessage> SeedWorkItemAsync(string title, string date) =>
+		_client.PostAsJsonAsync("/api/work-items", new { Title = title, Category = "SmallThing", Date = date });
 }
