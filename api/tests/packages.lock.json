@@ -1086,7 +1086,7 @@
       "dailywork.api": {
         "type": "Project",
         "dependencies": {
-          "Aspire.Npgsql.EntityFrameworkCore.PostgreSQL": "[13.6.0, )",
+          "Aspire.Npgsql.EntityFrameworkCore.PostgreSQL": "[13.6.1, )",
           "Azure.Identity": "[1.20.0, )",
           "DailyWork.ServiceDefaults": "[1.0.0, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.1, )",
@@ -1108,9 +1108,9 @@
       },
       "Aspire.Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "CentralTransitive",
-        "requested": "[13.6.0, )",
-        "resolved": "13.6.0",
-        "contentHash": "hkhHiRa9nbqWt7Bpmq6LVaE3L46ZjwNN+Kk5DwjfVTw+tohaURYd6eWQFX0hqyMyJcmrWwWg0n1L5u7LnUB1Mw==",
+        "requested": "[13.6.1, )",
+        "resolved": "13.6.1",
+        "contentHash": "4J8ZPPlo88+wt3frbASAPH6OBGMZ1/f9ywnEsSsS8QvMECAU6RWgmxrR/Qjg70L0Dax5Ontt9IWyq8TYvGj2kg==",
         "dependencies": {
           "Microsoft.Extensions.Caching.Memory": "10.0.12",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.12",
