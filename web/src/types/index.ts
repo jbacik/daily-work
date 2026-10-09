@@ -11,7 +11,18 @@ export interface WorkItem {
   isSkipped: boolean
 }
 
-export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week' | 'punch'
+export type CommandType = 'standup' | 'weekly' | 'evaluate-my-week' | 'punch' | 'export-feedback'
+
+// One generated standup draft paired with the markdown actually saved (GET /api/standup/feedback-pairs)
+export interface FeedbackPair {
+  date: string
+  commType: string
+  promptVariant: string
+  systemPrompt: string
+  userMessage: string
+  generatedMarkdown: string
+  submittedMarkdown: string
+}
 
 export interface ReadWatchItem {
   id: number

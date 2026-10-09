@@ -29,6 +29,9 @@ backups/
 # CalendarForecasts:Directory — generated data, not source.
 resources/calendar-forecasts/
 
+# Standup feedback-pair exports written by /export-feedback — personal data, not source.
+feedback/
+
 # Prototypes and Ephemeral Assets
 prototypes/
 /.claude/settings.local.json

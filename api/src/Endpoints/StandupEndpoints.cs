@@ -12,8 +12,11 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace DailyWork.Api.Endpoints;
 
-internal static class StandupEndpoints
+internal static partial class StandupEndpoints
 {
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring unknown standup generation {GenerationId} on save for {Date}")]
+	private static partial void LogUnknownGeneration(ILogger logger, int generationId, DateOnly date);
+
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -50,7 +53,7 @@ internal static class StandupEndpoints
 			return Results.Ok(new { entry.Markdown, Date = entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
 		});
 
-		group.MapPost("/", async (AppDbContext db, SaveUpdateCommDto dto) =>
+		group.MapPost("/", async (AppDbContext db, IConfiguration config, ILoggerFactory loggerFactory, SaveUpdateCommDto dto) =>
 		{
 			var date = DateOnly.Parse(dto.Date, CultureInfo.InvariantCulture);
 			var type = ResolveCommType(dto.CommandType);
@@ -69,6 +72,20 @@ internal static class StandupEndpoints
 					_ => new DailyStandupComm { Date = date, Markdown = dto.Markdown },
 				};
 				db.UpdateComms.Add(entry);
+			}
+
+			// Link the saved (edited) markdown to the draft it came from, so the pair can be exported
+			if (dto.GenerationId is not null && IsFeedbackCaptureEnabled(config))
+			{
+				var generation = await db.StandupGenerations.FindAsync(dto.GenerationId.Value);
+				if (generation is not null)
+				{
+					entry.GenerationId = generation.Id;
+				}
+				else
+				{
+					LogUnknownGeneration(loggerFactory.CreateLogger(nameof(StandupEndpoints)), dto.GenerationId.Value, date);
+				}
 			}
 
 			await db.SaveChangesAsync();
@@ -130,6 +147,7 @@ internal static class StandupEndpoints
 			AppDbContext db,
 			IDateTimeProvider dateTime,
 			IChatCompletionService? chatService,
+			IConfiguration config,
 			ILoggerFactory loggerFactory,
 			string? weekOf,
 			string? commandType,
@@ -243,12 +261,68 @@ internal static class StandupEndpoints
 
 			var settings = new OpenAIPromptExecutionSettings { Temperature = 0.35 };
 			var response = await chatService.GetChatMessageContentAsync(chatHistory, settings);
+			var markdown = response.Content ?? string.Empty;
 
-			return Results.Ok(new { markdown = response.Content });
+			int? generationId = null;
+			if (IsFeedbackCaptureEnabled(config))
+			{
+				var promptVariant = useWeeklyPrompt ? "weekly" : dayOfWeek switch
+				{
+					DayOfWeek.Monday => "monday",
+					DayOfWeek.Friday => "friday",
+					_ => "midweek",
+				};
+				var generation = new StandupGeneration
+				{
+					Date = todayDate,
+					CommType = ResolveCommType(commandType),
+					PromptVariant = $"{promptVariant}-{StandupPrompts.PromptVersion}",
+					SystemPrompt = systemPrompt,
+					UserMessage = userMessage,
+					GeneratedMarkdown = markdown,
+				};
+				db.StandupGenerations.Add(generation);
+				await db.SaveChangesAsync();
+				generationId = generation.Id;
+			}
+
+			return Results.Ok(new { markdown, generationId });
+		});
+
+		group.MapGet("/feedback-pairs", async (AppDbContext db, IConfiguration config, DateOnly? from, DateOnly? to) =>
+		{
+			if (!IsFeedbackCaptureEnabled(config))
+				return Results.NotFound();
+
+			if (from is null || to is null)
+				return Results.BadRequest("from and to query parameters are required (yyyy-MM-dd).");
+
+			var pairs = await db.UpdateComms
+				.AsNoTracking()
+				.Where(c => c.GenerationId != null && c.Date >= from && c.Date <= to)
+				.Join(db.StandupGenerations, c => c.GenerationId, g => (int?)g.Id, (c, g) => new { Comm = c, Generation = g })
+				.OrderBy(p => p.Comm.Date)
+				.ThenBy(p => p.Comm.CommType)
+				.Select(p => new
+				{
+					p.Comm.Date,
+					p.Comm.CommType,
+					p.Generation.PromptVariant,
+					p.Generation.SystemPrompt,
+					p.Generation.UserMessage,
+					p.Generation.GeneratedMarkdown,
+					SubmittedMarkdown = p.Comm.Markdown,
+				})
+				.ToListAsync();
+
+			return Results.Ok(pairs);
 		});
 
 		return group;
 	}
+
+	private static bool IsFeedbackCaptureEnabled(IConfiguration config) =>
+		config.GetValue<bool>("Features:StandupFeedbackCapture");
 
 	private static CommType ResolveCommType(string? commandType)
 	{

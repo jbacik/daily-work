@@ -13,6 +13,7 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 	public DbSet<WorkSession> WorkSessions => Set<WorkSession>();
 	public DbSet<WorkMetricDefinition> WorkMetricDefinitions => Set<WorkMetricDefinition>();
 	public DbSet<WorkMetricEntry> WorkMetricEntries => Set<WorkMetricEntry>();
+	public DbSet<StandupGeneration> StandupGenerations => Set<StandupGeneration>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -37,6 +38,15 @@ internal class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(
 			 .HasValue<WeeklyUpdateComm>(CommType.WeeklyUpdate)
 			 .HasValue<WeeklySummaryComm>(CommType.WeeklySummary);
 			e.HasIndex(c => new { c.Date, c.CommType }).IsUnique();
+			e.HasOne<StandupGeneration>()
+				.WithMany()
+				.HasForeignKey(c => c.GenerationId)
+				.OnDelete(DeleteBehavior.SetNull);
+		});
+
+		modelBuilder.Entity<StandupGeneration>(e =>
+		{
+			e.HasIndex(g => g.Date);
 		});
 
 		modelBuilder.Entity<ScratchPad>(e =>
