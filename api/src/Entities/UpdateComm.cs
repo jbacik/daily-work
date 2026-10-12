@@ -9,6 +9,7 @@ internal abstract class UpdateComm
 	public required string Markdown { get; set; }
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	public CommType CommType { get; set; }
+	public int? GenerationId { get; set; }
 }
 
 internal class DailyStandupComm : UpdateComm

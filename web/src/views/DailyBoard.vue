@@ -20,6 +20,7 @@ import CommandModal from '@/components/CommandModal.vue'
 import StandupPlanningModal from '@/components/StandupPlanningModal.vue'
 import EvaluateWeekModal from '@/components/EvaluateWeekModal.vue'
 import PunchModal from '@/components/PunchModal.vue'
+import ExportFeedbackModal from '@/components/ExportFeedbackModal.vue'
 import PastWeekView from '@/components/PastWeekView.vue'
 import MetricsPanel from '@/components/MetricsPanel.vue'
 import MetricDefinitions from '@/components/MetricDefinitions.vue'
@@ -164,7 +165,11 @@ onMounted(() => {
         </div>
       </header>
 
-      <SlashCommandMenu @command="handleCommand" @archive="handleArchive" />
+      <SlashCommandMenu
+        :show-export-feedback="!isPastWeek && view === 'weekly'"
+        @command="handleCommand"
+        @archive="handleArchive"
+      />
 
       <BigThing v-if="!isPastWeek" />
 
@@ -189,6 +194,11 @@ onMounted(() => {
 
       <PunchModal
         :is-open="activeCommand === 'punch'"
+        @close="activeCommand = null"
+      />
+
+      <ExportFeedbackModal
+        :is-open="activeCommand === 'export-feedback'"
         @close="activeCommand = null"
       />
 

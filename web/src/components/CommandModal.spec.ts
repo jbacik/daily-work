@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import CommandModal from './CommandModal.vue'
 import type { Mock } from 'vitest'
@@ -178,6 +178,88 @@ describe('CommandModal', () => {
     await nextTick()
 
     expect(queryBody('[data-testid="cmd-regenerate"]')).not.toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_SendsGenerationId_WhenSavingGeneratedDraft', async () => {
+    clientPost.mockResolvedValueOnce({
+      markdown: '### Did you complete your One Thing yesterday?\nCrushed it.',
+      generationId: 7,
+    })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].generationId).toBe(7)
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_OmitsGenerationId_WhenReopenedAfterAbandonedDraft', async () => {
+    // Arrange — generate a draft (no saved entry yet), then close without saving
+    clientPost.mockResolvedValueOnce({ markdown: '### Q?\nDraft.', generationId: 7 })
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await flushPromises()
+    await wrapper.setProps({ isOpen: false })
+    await flushPromises()
+
+    // Act — reopen onto a saved entry and save it
+    clientGet.mockResolvedValue({ markdown: '### Q?\nSaved earlier.', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    await wrapper.setProps({ isOpen: true })
+    await flushPromises()
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    // Assert
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_OmitsGenerationId_WhenSavingLoadedEntry', async () => {
+    clientGet.mockResolvedValue({ markdown: '### Did you complete?\nYes saved!', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_SavesEditedText_WhenAnswerEditedInPlace', async () => {
+    clientGet.mockResolvedValue({ markdown: '### Did you complete?\nYes saved!', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await nextTick()
+    await nextTick()
+    await nextTick()
+
+    const answer = queryBody('[data-section-answer="0"]') as HTMLElement
+    answer.innerHTML = 'Edited by hand'
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].markdown).toBe('### Did you complete?\nEdited by hand')
 
     wrapper.unmount()
   })

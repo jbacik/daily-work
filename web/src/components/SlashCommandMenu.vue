@@ -3,6 +3,10 @@ import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { CommandType } from '@/types'
 import { getRecentWeekStarts, formatWeekRange } from '@/utils/week'
 
+const { showExportFeedback = false } = defineProps<{
+  showExportFeedback?: boolean
+}>()
+
 const emit = defineEmits<{
   command: [type: CommandType]
   archive: [weekOf: string]
@@ -87,7 +91,7 @@ onUnmounted(() => {
   <div ref="panelRef">
     <div
       class="overflow-hidden transition-all duration-200 ease-out"
-      :class="isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'"
+      :class="isOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'"
     >
       <div class="border border-border p-4 bg-card mt-1 mb-4" data-testid="slash-menu-panel">
         <div class="text-xs text-muted-foreground mb-3">
@@ -130,6 +134,16 @@ onUnmounted(() => {
           >
             <span class="text-accent">/punch</span>
             <span class="text-muted-foreground"> - adjust your clock in or out time</span>
+          </button>
+
+          <button
+            v-if="showExportFeedback"
+            data-testid="cmd-export-feedback"
+            class="w-full text-left px-2 py-1 hover:bg-secondary/50 transition-colors"
+            @click="handleCommandClick('export-feedback')"
+          >
+            <span class="text-accent">/export-feedback</span>
+            <span class="text-muted-foreground"> - download standup draft vs. submitted pairs</span>
           </button>
 
           <button

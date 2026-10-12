@@ -103,6 +103,7 @@ All conventions live in `.claude/rules/`. Read the relevant file before touching
 - `/create-adr` — record a significant architectural decision in `docs/decision-records/`
 - `/update-context` — add or correct terms in `CONTEXT.md`
 - `/pr-feedback` — triage the latest Copilot review on the current PR
+- `/export-feedback` — export standup draft-vs-submitted pairs for a date range and analyze edits (needs `Features:StandupFeedbackCapture` on)
 
 ## Key Constraints
 

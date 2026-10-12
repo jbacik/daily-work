@@ -17,7 +17,7 @@ namespace DailyWork.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -100,6 +100,46 @@ namespace DailyWork.Api.Migrations
                     b.ToTable("ScratchPads");
                 });
 
+            modelBuilder.Entity("DailyWork.Api.Entities.StandupGeneration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CommType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("GeneratedMarkdown")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PromptVariant")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SystemPrompt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserMessage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.ToTable("StandupGenerations");
+                });
+
             modelBuilder.Entity("DailyWork.Api.Entities.UpdateComm", b =>
                 {
                     b.Property<int>("Id")
@@ -117,11 +157,16 @@ namespace DailyWork.Api.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<int?>("GenerationId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Markdown")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GenerationId");
 
                     b.HasIndex("Date", "CommType")
                         .IsUnique();
@@ -306,6 +351,14 @@ namespace DailyWork.Api.Migrations
                     b.HasBaseType("DailyWork.Api.Entities.UpdateComm");
 
                     b.HasDiscriminator().HasValue(2);
+                });
+
+            modelBuilder.Entity("DailyWork.Api.Entities.UpdateComm", b =>
+                {
+                    b.HasOne("DailyWork.Api.Entities.StandupGeneration", null)
+                        .WithMany()
+                        .HasForeignKey("GenerationId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("DailyWork.Api.Entities.WorkMetricEntry", b =>
