@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import CommandModal from './CommandModal.vue'
 import type { Mock } from 'vitest'
@@ -199,6 +199,29 @@ describe('CommandModal', () => {
 
     const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
     expect(saveCall![1].generationId).toBe(7)
+
+    wrapper.unmount()
+  })
+
+  it('CommandModal_OmitsGenerationId_WhenReopenedAfterAbandonedDraft', async () => {
+    // Arrange — generate a draft (no saved entry yet), then close without saving
+    clientPost.mockResolvedValueOnce({ markdown: '### Q?\nDraft.', generationId: 7 })
+    const wrapper = mountComponent({ commandType: 'standup' })
+    await flushPromises()
+    await wrapper.setProps({ isOpen: false })
+    await flushPromises()
+
+    // Act — reopen onto a saved entry and save it
+    clientGet.mockResolvedValue({ markdown: '### Q?\nSaved earlier.', date: '2026-04-07' })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    await wrapper.setProps({ isOpen: true })
+    await flushPromises()
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    // Assert
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
 
     wrapper.unmount()
   })

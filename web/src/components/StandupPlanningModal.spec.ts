@@ -229,6 +229,34 @@ describe('StandupPlanningModal', () => {
     wrapper.unmount()
   })
 
+  it('StandupPlanningModal_OmitsGenerationId_WhenReopenedAfterAbandonedDraft', async () => {
+    // Arrange — generate a draft, then close without saving
+    mockEndpoints()
+    clientPost.mockImplementation((url: string) =>
+      url === '/api/standup/generate'
+        ? Promise.resolve({ markdown: savedMarkdown, generationId: 42 })
+        : Promise.resolve({ markdown: '', date: '' }))
+    const wrapper = mountComponent()
+    await flushPromises()
+    ;(queryBody('[data-testid="generate-standup-btn"]') as HTMLElement).click()
+    await flushPromises()
+    await wrapper.setProps({ isOpen: false })
+    await flushPromises()
+
+    // Act — reopen onto the previously saved entry and save it
+    mockEndpoints({ saved: true })
+    await wrapper.setProps({ isOpen: true })
+    await flushPromises()
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    // Assert
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
   it('StandupPlanningModal_OmitsGenerationId_WhenSavingWithoutGenerating', async () => {
     mockEndpoints({ saved: true })
     clientPost.mockResolvedValue({ markdown: '', date: '' })

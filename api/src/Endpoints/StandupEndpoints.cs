@@ -14,7 +14,7 @@ namespace DailyWork.Api.Endpoints;
 
 internal static partial class StandupEndpoints
 {
-	[LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring unknown standup generation {GenerationId} on save for {Date}")]
+	[LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring unknown or mismatched standup generation {GenerationId} on save for {Date}")]
 	private static partial void LogUnknownGeneration(ILogger logger, int generationId, DateOnly date);
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
@@ -77,8 +77,9 @@ internal static partial class StandupEndpoints
 			// Link the saved (edited) markdown to the draft it came from, so the pair can be exported
 			if (dto.GenerationId is not null && IsFeedbackCaptureEnabled(config))
 			{
+				// A draft generated for a different day or comm type would make a misleading pair
 				var generation = await db.StandupGenerations.FindAsync(dto.GenerationId.Value);
-				if (generation is not null)
+				if (generation is not null && generation.Date == date && generation.CommType == type)
 				{
 					entry.GenerationId = generation.Id;
 				}
@@ -296,6 +297,9 @@ internal static partial class StandupEndpoints
 
 			if (from is null || to is null)
 				return Results.BadRequest("from and to query parameters are required (yyyy-MM-dd).");
+
+			if (from > to)
+				return Results.BadRequest("from must be on or before to.");
 
 			var pairs = await db.UpdateComms
 				.AsNoTracking()

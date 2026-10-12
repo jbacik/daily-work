@@ -181,6 +181,8 @@ function placeCursorAtEnd() {
 }
 
 watch(() => isOpen, (open) => {
+  // A draft from a previous open must never pair with whatever gets saved this time
+  generationId.value = null
   if (open) {
     handleOpen()
   } else {

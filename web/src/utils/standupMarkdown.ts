@@ -15,13 +15,16 @@ export function answerElementToMarkdown(el: HTMLElement): string {
 
 // Returns sections with each answer replaced by what is currently in the editable DOM,
 // falling back to the original answer when its element is gone (e.g. the user deleted it).
+// Pressing Enter in Chrome splits the answer div into siblings that all keep the same
+// data-section-answer attribute, so every match is read and joined line by line.
 export function readEditedSections(
   root: HTMLElement | null,
   sections: { question: string; answer: string }[],
 ): { question: string; answer: string }[] {
   if (!root) return sections
   return sections.map((section, i) => {
-    const answerEl = root.querySelector<HTMLElement>(`[data-section-answer="${i}"]`)
-    return answerEl ? { question: section.question, answer: answerElementToMarkdown(answerEl) } : section
+    const answerEls = Array.from(root.querySelectorAll<HTMLElement>(`[data-section-answer="${i}"]`))
+    if (answerEls.length === 0) return section
+    return { question: section.question, answer: answerEls.map(answerElementToMarkdown).join('\n').trim() }
   })
 }

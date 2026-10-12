@@ -633,6 +633,65 @@ public class StandupEndpointTests : IClassFixture<CustomWebApplicationFactory>, 
 	}
 
 	[Fact]
+	public async Task SaveStandup_IgnoresGenerationId_WhenGenerationForDifferentDate()
+	{
+		// Arrange — draft generated for 2020-01-15
+		_factory.ChatCompletionService.ResponseContent = "Draft for Wednesday";
+		await SeedWorkItemAsync("Mismatch item", "2020-01-15");
+		var generateResponse = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15", null);
+		var generated = await generateResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		var generationId = generated.GetProperty("generationId").GetInt32();
+
+		// Act — save a different day's standup claiming that draft
+		var response = await _client.PostAsJsonAsync("/api/standup", new
+		{
+			Markdown = "Thursday text",
+			Date = "2020-01-16",
+			GenerationId = generationId,
+		});
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.OK);
+		var pairsResponse = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+		var pairs = await pairsResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		pairs.GetArrayLength().ShouldBe(0);
+	}
+
+	[Fact]
+	public async Task SaveStandup_IgnoresGenerationId_WhenGenerationForDifferentCommType()
+	{
+		// Arrange — weekly draft generated for 2020-01-15
+		_factory.ChatCompletionService.ResponseContent = "Weekly draft";
+		await SeedWorkItemAsync("Weekly mismatch item", "2020-01-15");
+		var generateResponse = await _client.PostAsync($"/api/standup/generate?weekOf={TestWeekOf}&today=2020-01-15&commandType=weekly", null);
+		var generated = await generateResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		var generationId = generated.GetProperty("generationId").GetInt32();
+
+		// Act — save it as the daily standup for the same date
+		await _client.PostAsJsonAsync("/api/standup", new
+		{
+			Markdown = "Daily text",
+			Date = "2020-01-15",
+			GenerationId = generationId,
+		});
+
+		// Assert
+		var pairsResponse = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-13&to=2020-01-17");
+		var pairs = await pairsResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+		pairs.GetArrayLength().ShouldBe(0);
+	}
+
+	[Fact]
+	public async Task GetFeedbackPairs_Returns400_WhenRangeInverted()
+	{
+		// Act
+		var response = await _client.GetAsync("/api/standup/feedback-pairs?from=2020-01-17&to=2020-01-13");
+
+		// Assert
+		response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+	}
+
+	[Fact]
 	public async Task GetFeedbackPairs_Returns400_WhenRangeMissing()
 	{
 		// Act

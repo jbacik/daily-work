@@ -43,6 +43,21 @@ describe('readEditedSections', () => {
     expect(result).toEqual([{ question: 'Q1', answer: 'Edited **answer**' }])
   })
 
+  it('ReadEditedSections_JoinsSplitAnswer_WhenEnterDuplicatesAnswerElement', () => {
+    // Arrange — Chrome's Enter splits the answer div and copies its attributes to the new sibling
+    const root = el(
+      '<div data-section-answer="0">First line of <strong>answer</strong></div>' +
+      '<div data-section-answer="0">Second line typed</div>',
+    )
+    const sections = [{ question: 'Q1', answer: 'Original answer' }]
+
+    // Act
+    const result = readEditedSections(root, sections)
+
+    // Assert
+    expect(result).toEqual([{ question: 'Q1', answer: 'First line of **answer**\nSecond line typed' }])
+  })
+
   it('ReadEditedSections_KeepsOriginalAnswer_WhenAnswerElementMissing', () => {
     // Arrange
     const root = el('')
