@@ -209,6 +209,88 @@ describe('StandupPlanningModal', () => {
     wrapper.unmount()
   })
 
+  it('StandupPlanningModal_SendsGenerationId_WhenSavingGeneratedDraft', async () => {
+    mockEndpoints()
+    clientPost.mockImplementation((url: string) =>
+      url === '/api/standup/generate'
+        ? Promise.resolve({ markdown: savedMarkdown, generationId: 42 })
+        : Promise.resolve({ markdown: '', date: '' }))
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    ;(queryBody('[data-testid="generate-standup-btn"]') as HTMLElement).click()
+    await flushPromises()
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].generationId).toBe(42)
+
+    wrapper.unmount()
+  })
+
+  it('StandupPlanningModal_OmitsGenerationId_WhenReopenedAfterAbandonedDraft', async () => {
+    // Arrange — generate a draft, then close without saving
+    mockEndpoints()
+    clientPost.mockImplementation((url: string) =>
+      url === '/api/standup/generate'
+        ? Promise.resolve({ markdown: savedMarkdown, generationId: 42 })
+        : Promise.resolve({ markdown: '', date: '' }))
+    const wrapper = mountComponent()
+    await flushPromises()
+    ;(queryBody('[data-testid="generate-standup-btn"]') as HTMLElement).click()
+    await flushPromises()
+    await wrapper.setProps({ isOpen: false })
+    await flushPromises()
+
+    // Act — reopen onto the previously saved entry and save it
+    mockEndpoints({ saved: true })
+    await wrapper.setProps({ isOpen: true })
+    await flushPromises()
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    // Assert
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
+  it('StandupPlanningModal_OmitsGenerationId_WhenSavingWithoutGenerating', async () => {
+    mockEndpoints({ saved: true })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1]).not.toHaveProperty('generationId')
+
+    wrapper.unmount()
+  })
+
+  it('StandupPlanningModal_SavesEditedText_WhenAnswerEditedInPlace', async () => {
+    mockEndpoints({ saved: true })
+    clientPost.mockResolvedValue({ markdown: '', date: '' })
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // Simulate the user typing over the first answer in the contenteditable area
+    const answer = queryBody('[data-section-answer="0"]') as HTMLElement
+    answer.innerHTML = 'Mostly done, <strong>shipped it</strong>'
+    ;(queryBody('[data-testid="cmd-save"]') as HTMLElement).click()
+    await nextTick()
+
+    const saveCall = clientPost.mock.calls.find((call: any[]) => call[0] === '/api/standup')
+    expect(saveCall![1].markdown).toContain('Mostly done, **shipped it**')
+    expect(saveCall![1].markdown).not.toContain('Crushed it.')
+
+    wrapper.unmount()
+  })
+
   it('StandupPlanningModal_UnloadsForecast_WhenUnloadClicked', async () => {
     mockEndpoints()
     const wrapper = mountComponent()

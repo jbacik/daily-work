@@ -2,6 +2,9 @@ namespace DailyWork.Api.Prompts;
 
 internal static class StandupPrompts
 {
+	// Bump whenever prompt wording changes so captured feedback pairs can be grouped by version.
+	internal const string PromptVersion = "v1";
+
 	internal static readonly string[] DoneOpeners =
 	[
 		"Hell yea!", "YESSIR!", "You know it!", "YES!", "Crushed it.",

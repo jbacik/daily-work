@@ -1,3 +1,3 @@
 namespace DailyWork.Api.Dtos;
 
-internal record SaveUpdateCommDto(string Markdown, string Date, string? CommandType);
+internal record SaveUpdateCommDto(string Markdown, string Date, string? CommandType, int? GenerationId = null);

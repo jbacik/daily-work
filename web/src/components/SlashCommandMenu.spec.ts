@@ -127,4 +127,25 @@ describe('SlashCommandMenu', () => {
 
     wrapper.unmount()
   })
+
+  it('SlashCommandMenu_HidesExportFeedback_WhenNotOnWeekView', () => {
+    const wrapper = mountComponent()
+
+    expect(wrapper.find('[data-testid="cmd-export-feedback"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('SlashCommandMenu_EmitsExportFeedback_WhenShownAndClicked', async () => {
+    const wrapper = mount(SlashCommandMenu, { props: { showExportFeedback: true }, attachTo: document.body })
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }))
+    await nextTick()
+
+    await wrapper.get('[data-testid="cmd-export-feedback"]').trigger('click')
+
+    expect(wrapper.emitted('command')![0]).toEqual(['export-feedback'])
+
+    wrapper.unmount()
+  })
 })
